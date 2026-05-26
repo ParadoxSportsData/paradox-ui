@@ -28,8 +28,12 @@ export function GameView({ gameId, onBack }: GameViewProps) {
     queryFn: () => getTimeline(gameId),
   })
 
-  const homeTeam = timelineQuery.data?.home_team ?? '—'
-  const awayTeam = timelineQuery.data?.away_team ?? '—'
+  // Guard against TanStack Query returning stale data from a previously cached game.
+  // Only use the response if its game_id matches the current prop — prevents header
+  // showing wrong team names during the transition to a newly selected game.
+  const canonicalData = timelineQuery.data?.game_id === gameId ? timelineQuery.data : undefined
+  const homeTeam = canonicalData?.home_team ?? '—'
+  const awayTeam = canonicalData?.away_team ?? '—'
 
   function handleTickChange(tick: number, play: PlaySnapshot | null) {
     setCurrentTick(tick)
