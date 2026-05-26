@@ -1,73 +1,88 @@
-# React + TypeScript + Vite
+# paradox-ui
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React + TypeScript frontend for the ParadoxSportsData platform. Connects to paradox-clock-gate (game state engine) to display NFL game state at any elapsed second via an interactive timeline scrubber.
 
-Currently, two official plugins are available:
+**Port:** 5173 (dev) / 4173 (preview)  
+**Repo:** [ParadoxSportsData/paradox-ui](https://github.com/ParadoxSportsData/paradox-ui)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+See [paradox-clock-gate](https://github.com/ParadoxSportsData/paradox-clock-gate) for the game state engine.
 
-## React Compiler
+---
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Prerequisites
 
-## Expanding the ESLint configuration
+- Node.js 20+ (`node --version` to check)
+- paradox-clock-gate serve running on port 8080 (or configure `VITE_API_URL`)
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+---
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## Quick start
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+git clone https://github.com/ParadoxSportsData/paradox-ui
+cd paradox-ui
+npm install
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Open [http://localhost:5173](http://localhost:5173).
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+---
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## Running against the live backend
+
+Start paradox-clock-gate serve first:
+
+```bash
+# In paradox-clock-gate/
+go build ./cmd/clock-gate/
+./clock-gate serve        # --port 8080 --data ./testdata (defaults)
+```
+
+Then start paradox-ui (connects to `http://localhost:8080` by default):
+
+```bash
+npm run dev
+```
+
+---
+
+## Mock mode (no backend required)
+
+```bash
+VITE_MOCK_MODE=true npm run dev
+```
+
+Returns fixture data — no backend required. Useful for UI development.
+
+---
+
+## Environment variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `VITE_API_URL` | `http://localhost:8080` | clock-gate serve base URL |
+| `VITE_MOCK_MODE` | `false` | Set to `true` to use fixture data instead of API calls |
+
+---
+
+## API surface consumed
+
+All calls go to paradox-clock-gate serve:
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| `GET` | `/games` | List all available games |
+| `GET` | `/games/{id}/timeline` | Play index for timeline scrubber |
+| `GET` | `/games/{id}/state?tick=T` | Game state at elapsed second T |
+
+---
+
+## Development
+
+```bash
+npm run dev        # dev server with HMR at :5173
+npm run build      # production build → dist/
+npm run preview    # preview production build at :4173
+npm run lint       # ESLint
 ```
