@@ -1,8 +1,8 @@
 // src/components/TimelineScrubber.tsx
 // PDX-24: Range slider over 0..maxTick with quarter markers.
 // PDX-50: Play type filter buttons (All/Run/Pass/Scoring) + Prev/Next navigation.
-// PDX-53: Manual MM:SS / raw-seconds text input.
 // PDX-56: Play tick dots on timeline bar update when filter changes (visual feedback).
+// PDX-85: Read-only Q+clock badge replaces elapsed-time text input.
 // Full timeline loaded once via TanStack Query. All scrubbing is local — no HTTP.
 
 import { useState, useMemo, useEffect } from 'react'
@@ -53,35 +53,12 @@ function findClosestPlay(plays: PlaySnapshot[], targetTick: number): PlaySnapsho
   return Math.abs(ceiling.tick - targetTick) < Math.abs(floor.tick - targetTick) ? ceiling : floor
 }
 
-function tickToMMSS(tick: number): string {
-  const m = Math.floor(tick / 60)
-  const s = tick % 60
-  return `${m}:${String(s).padStart(2, '0')}`
-}
-
 // Quarter clock remaining: counts down from 15:00 per quarter, matching play description (MM:SS) prefix.
 function tickToQtrClock(quarter: number, tick: number): string {
   const remaining = Math.max(0, quarter * 900 - tick)
   const m = Math.floor(remaining / 60)
   const s = remaining % 60
   return `${m}:${String(s).padStart(2, '0')}`
-}
-
-// PDX-53: Parse a user-typed time string into seconds.
-// Accepts: "MM:SS" or raw integer seconds. Returns null on invalid input.
-function parseTimeInput(raw: string): number | null {
-  const trimmed = raw.trim()
-  if (/^\d+$/.test(trimmed)) {
-    return parseInt(trimmed, 10)
-  }
-  if (/^\d+:\d{2}$/.test(trimmed)) {
-    const [minPart, secPart] = trimmed.split(':')
-    const minutes = parseInt(minPart, 10)
-    const seconds = parseInt(secPart, 10)
-    if (seconds >= 60) return null
-    return minutes * 60 + seconds
-  }
-  return null
 }
 
 // PDX-50: Filter predicate for Scoring plays.
@@ -119,8 +96,6 @@ export function TimelineScrubber({ gameId, value, onTickChange }: TimelineScrubb
   const [activeFilter, setActiveFilter] = useState<FilterKey>('all')
   // PDX-72: hover state for clickable dot tooltips
   const [hoveredTick, setHoveredTick] = useState<number | null>(null)
-  // PDX-53: controlled input value mirrors tick as MM:SS; user can freely edit it
-  const [timeInputValue, setTimeInputValue] = useState('0:00')
 
   const query = useQuery({
     queryKey: ['timeline', gameId],
@@ -134,7 +109,6 @@ export function TimelineScrubber({ gameId, value, onTickChange }: TimelineScrubb
     if (value === undefined || value === tick) return
     const play = query.data ? findNearestPlay(query.data.plays, value) : null
     setTick(value)
-    setTimeInputValue(tickToMMSS(value))
     onTickChange(value, play)
   }, [value]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -176,10 +150,8 @@ export function TimelineScrubber({ gameId, value, onTickChange }: TimelineScrubb
     return null
   }
 
-  // Shared state-update helper: update tick, sync input display, fire callback
   function applyTick(newTick: number, play: PlaySnapshot | null) {
     setTick(newTick)
-    setTimeInputValue(tickToMMSS(newTick))
     onTickChange(newTick, play)
   }
 
@@ -209,29 +181,6 @@ export function TimelineScrubber({ gameId, value, onTickChange }: TimelineScrubb
   function handleNext() {
     const target = nextTick()
     if (target) applyTick(target.tick, target.play)
-  }
-
-  // PDX-53: commit typed time value
-  function commitTimeInput() {
-    const parsed = parseTimeInput(timeInputValue)
-    if (parsed === null) {
-      setTimeInputValue(tickToMMSS(tick))
-      return
-    }
-    const clamped = Math.max(0, Math.min(parsed, maxTick))
-    if (activeFilter !== 'all' && filteredPlays.length > 0) {
-      const target = findNearestPlay(filteredPlays, clamped)
-      if (target) { applyTick(target.tick, target); return }
-    }
-    const play = query.data ? findNearestPlay(query.data.plays, clamped) : null
-    applyTick(clamped, play)
-  }
-
-  function handleTimeKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
-    if (e.key === 'Enter') {
-      commitTimeInput()
-      ;(e.target as HTMLInputElement).blur()
-    }
   }
 
   const nearestPlay = query.data ? findNearestPlay(query.data.plays, tick) : null
@@ -306,23 +255,10 @@ export function TimelineScrubber({ gameId, value, onTickChange }: TimelineScrubb
         {/* Spacer */}
         <div className="flex-1" />
 
-        {/* PDX-53: Manual time input */}
-        <input
-          type="text"
-          value={timeInputValue}
-          onChange={(e) => setTimeInputValue(e.target.value)}
-          onBlur={commitTimeInput}
-          onKeyDown={handleTimeKeyDown}
-          className="w-20 px-2 py-1 rounded text-sm bg-gray-800 border border-gray-600 text-gray-200 text-center focus:outline-none focus:border-blue-500"
-          aria-label="Jump to time (MM:SS or seconds)"
-          placeholder="0:00"
-        />
-      </div>
-
-      {/* Elapsed / max labels */}
-      <div className="flex justify-between text-xs text-gray-400 mb-1">
-        <span>Q{quarter} — {displayTime}</span>
-        <span>{maxTick > 3600 ? 'OT' : 'Final'}</span>
+        {/* PDX-85: Read-only Q+clock badge */}
+        <div className="w-24 px-2 py-1 rounded text-sm bg-gray-800 border border-gray-700 text-gray-200 text-center font-mono select-none">
+          {quarter === 5 ? 'OT' : `Q${quarter}`} {displayTime}
+        </div>
       </div>
 
       {/* Slider + quarter markers + play tick dots */}
