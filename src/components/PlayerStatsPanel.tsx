@@ -7,6 +7,7 @@
 // Pure display: no API calls. Sections omitted when both teams have no players.
 
 import type { QBStats, RBStats, WRTEStats, KStats, PlayerGroup } from '../api/stats'
+import { getTeamColor } from '../lib/nflTeams'
 
 interface PlayerStatsPanelProps {
   homeTeam: string
@@ -154,10 +155,10 @@ export function PlayerStatsPanel({ homeTeam, awayTeam, homePlayers, awayPlayers 
       <div className="grid grid-cols-2">
         {/* Team name headers */}
         <div className="pr-3 mb-1.5">
-          <div className="text-xs font-mono font-semibold text-red-400">{awayTeam}</div>
+          <div className="text-xs font-mono font-semibold" style={{ color: getTeamColor(awayTeam) }}>{awayTeam}</div>
         </div>
         <div className="pl-3 border-l border-gray-700 mb-1.5">
-          <div className="text-xs font-mono font-semibold text-blue-400">{homeTeam}</div>
+          <div className="text-xs font-mono font-semibold" style={{ color: getTeamColor(homeTeam) }}>{homeTeam}</div>
         </div>
 
         {/* QB row */}
