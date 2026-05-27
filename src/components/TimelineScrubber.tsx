@@ -36,6 +36,14 @@ function tickToMMSS(tick: number): string {
   return `${m}:${String(s).padStart(2, '0')}`
 }
 
+// Quarter clock remaining: counts down from 15:00 per quarter, matching play description (MM:SS) prefix.
+function tickToQtrClock(quarter: number, tick: number): string {
+  const remaining = Math.max(0, quarter * 900 - tick)
+  const m = Math.floor(remaining / 60)
+  const s = remaining % 60
+  return `${m}:${String(s).padStart(2, '0')}`
+}
+
 const QUARTER_TICKS = [900, 1800, 2700, 3600]
 const QUARTER_LABELS = ['Q1', 'Q2', 'Q3', 'Q4']
 
@@ -58,7 +66,7 @@ export function TimelineScrubber({ gameId, onTickChange }: TimelineScrubberProps
 
   const nearestPlay = query.data ? findNearestPlay(query.data.plays, tick) : null
   const quarter = nearestPlay?.quarter ?? 1
-  const displayTime = tickToMMSS(tick)
+  const displayTime = tickToQtrClock(quarter, tick)
 
   if (query.isLoading) {
     return (
