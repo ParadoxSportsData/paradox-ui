@@ -47,7 +47,7 @@ function GameCard({
       </div>
       <div className="text-2xl font-mono mt-1">
         {blindMode ? (
-          <span className="text-gray-600">? – ?</span>
+          <span className="text-blue-300 blur-md select-none" aria-hidden="true">00 – 00</span>
         ) : (
           <span className="text-blue-300">{game.home_score} – {game.away_score}</span>
         )}
