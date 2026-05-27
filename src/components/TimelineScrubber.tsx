@@ -2,6 +2,7 @@
 // PDX-24: Range slider over 0..maxTick with quarter markers.
 // PDX-50: Play type filter buttons (All/Run/Pass/Scoring) + Prev/Next navigation.
 // PDX-53: Manual MM:SS / raw-seconds text input.
+// PDX-56: Play tick dots on timeline bar update when filter changes (visual feedback).
 // Full timeline loaded once via TanStack Query. All scrubbing is local — no HTTP.
 
 import { useState, useMemo } from 'react'
@@ -276,7 +277,7 @@ export function TimelineScrubber({ gameId, onTickChange }: TimelineScrubberProps
         <span>{tickToMMSS(maxTick)}</span>
       </div>
 
-      {/* Slider + quarter markers */}
+      {/* Slider + quarter markers + play tick dots */}
       <div className="relative">
         <input
           type="range"
@@ -286,13 +287,27 @@ export function TimelineScrubber({ gameId, onTickChange }: TimelineScrubberProps
           onChange={handleSliderChange}
           className="w-full h-2 bg-gray-700 rounded appearance-none cursor-pointer accent-blue-500"
         />
+        {/* PDX-56: Play tick dots — update when filter changes so the visual effect is immediate */}
+        {filteredTicks.map((t) => (
+          <div
+            key={t}
+            className={[
+              'absolute top-0 w-px h-2 pointer-events-none',
+              activeFilter === 'scoring' ? 'bg-amber-400 opacity-90'
+              : activeFilter === 'run'   ? 'bg-green-400 opacity-70'
+              : activeFilter === 'pass'  ? 'bg-sky-400 opacity-70'
+              : 'bg-gray-400 opacity-25',
+            ].join(' ')}
+            style={{ left: `${(t / maxTick) * 100}%` }}
+          />
+        ))}
         {/* Quarter marker lines */}
         {QUARTER_TICKS.filter((qt) => qt <= maxTick).map((qt, i) => {
           const pct = (qt / maxTick) * 100
           return (
             <div
               key={qt}
-              className="absolute top-0 flex flex-col items-center"
+              className="absolute top-0 flex flex-col items-center pointer-events-none"
               style={{ left: `${pct}%`, transform: 'translateX(-50%)' }}
             >
               <div className="w-px h-3 bg-gray-500 mt-0.5" />
@@ -303,7 +318,7 @@ export function TimelineScrubber({ gameId, onTickChange }: TimelineScrubberProps
         {/* OT marker */}
         {maxTick > 3600 && (
           <div
-            className="absolute top-0 flex flex-col items-center"
+            className="absolute top-0 flex flex-col items-center pointer-events-none"
             style={{ left: `${(4500 / maxTick) * 100}%`, transform: 'translateX(-50%)' }}
           >
             <div className="w-px h-3 bg-yellow-600 mt-0.5" />
