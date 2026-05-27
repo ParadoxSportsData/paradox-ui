@@ -24,11 +24,52 @@ const STATS_INTERVAL_MS = 100
 interface GameViewProps {
   gameId: string
   onBack: () => void
+  onGoToLab: () => void
+}
+
+function NavMenu({ onGoToGames, onGoToLab }: { onGoToGames: () => void; onGoToLab: () => void }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 cursor-pointer transition-colors"
+        aria-label="Navigation menu"
+        aria-expanded={open}
+      >
+        <svg width="18" height="14" viewBox="0 0 18 14" fill="currentColor">
+          <rect width="18" height="2" rx="1" />
+          <rect y="6" width="18" height="2" rx="1" />
+          <rect y="12" width="18" height="2" rx="1" />
+        </svg>
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+          <div className="absolute left-0 top-full mt-1.5 z-20 bg-gray-800 border border-gray-700/60 rounded-lg shadow-xl overflow-hidden min-w-[180px]">
+            <button
+              onClick={() => { setOpen(false); onGoToGames() }}
+              className="w-full text-left px-4 py-2.5 text-sm text-gray-300 hover:bg-gray-700 hover:text-white transition-colors cursor-pointer"
+            >
+              Game Selection
+            </button>
+            <div className="border-t border-gray-700/60" />
+            <button
+              onClick={() => { setOpen(false); onGoToLab() }}
+              className="w-full text-left px-4 py-2.5 text-sm text-gray-300 hover:bg-gray-700 hover:text-white transition-colors cursor-pointer"
+            >
+              The Lab
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  )
 }
 
 function StatsSkeleton() {
   return (
-    <div className="bg-gray-800 rounded-lg p-4 space-y-2">
+    <div className="bg-gray-800 rounded-lg p-4 space-y-2 border border-gray-700/60">
       {[...Array(6)].map((_, i) => (
         <div key={i} className="h-4 bg-gray-700 rounded animate-pulse" style={{ width: `${70 + (i % 3) * 10}%` }} />
       ))}
@@ -36,7 +77,7 @@ function StatsSkeleton() {
   )
 }
 
-export function GameView({ gameId, onBack }: GameViewProps) {
+export function GameView({ gameId, onBack, onGoToLab }: GameViewProps) {
   const [currentPlay, setCurrentPlay] = useState<PlaySnapshot | null>(null)
   const [currentTick, setCurrentTick] = useState(0)
   const [statsData, setStatsData] = useState<StatsResponse | null>(null)
@@ -128,24 +169,19 @@ export function GameView({ gameId, onBack }: GameViewProps) {
   return (
     <div className="min-h-screen bg-gray-950 text-gray-100 flex flex-col">
       {/* Header */}
-      <header className="flex items-center gap-3 px-6 py-4 bg-gray-900 border-b border-gray-800">
-        <button
-          onClick={onBack}
-          className="text-gray-400 hover:text-white text-sm flex items-center gap-1"
-        >
-          ← Back
-        </button>
-        <h1 className="text-lg font-semibold text-white">
-          {awayTeam} @ {homeTeam}
-        </h1>
-        <div className="ml-auto flex items-center gap-3">
-          <span className="text-xs text-gray-500 font-mono">{gameId}</span>
+      <header className="relative flex items-center px-4 py-3 bg-gray-900 border-b border-gray-700/60">
+        <NavMenu onGoToGames={onBack} onGoToLab={onGoToLab} />
+        <div className="absolute inset-x-0 flex justify-center pointer-events-none">
+          <h1 className="text-2xl font-bold text-white tracking-tight">
+            {awayTeam} <span className="text-gray-600 font-normal mx-1">@</span> {homeTeam}
+          </h1>
         </div>
+        <span className="ml-auto text-xs text-gray-600 font-mono">{gameId}</span>
       </header>
 
       <main className="flex flex-col gap-4 p-4 flex-1">
         <ErrorBoundary>
-          <div className="bg-gray-900 rounded-lg">
+          <div className="bg-gray-900 rounded-lg border border-gray-700/60">
             <TimelineScrubber gameId={gameId} value={currentTick} onTickChange={handleTickChange} />
             <WinProbChart
               gameId={gameId}
@@ -186,7 +222,7 @@ export function GameView({ gameId, onBack }: GameViewProps) {
               />
             </>
           ) : statsError ? (
-            <div className="text-xs text-gray-600 text-center py-2">Stats unavailable</div>
+            <div className="text-xs text-gray-400 text-center bg-gray-800 rounded-lg p-4 min-h-[160px] flex items-center justify-center">Stats unavailable</div>
           ) : null}
         </ErrorBoundary>
       </main>

@@ -103,6 +103,13 @@ const FILTER_LABELS: { key: FilterKey; label: string }[] = [
   { key: 'scoring', label: 'Scoring' },
 ]
 
+const FILTER_ACTIVE_CLASS: Record<FilterKey, string> = {
+  all: 'bg-blue-600 text-white',
+  run: 'bg-green-700 text-white',
+  pass: 'bg-sky-700 text-white',
+  scoring: 'bg-amber-600 text-white',
+}
+
 const QUARTER_TICKS = [900, 1800, 2700, 3600]
 const QUARTER_LABELS = ['Q1', 'Q2', 'Q3', 'Q4']
 
@@ -255,7 +262,7 @@ export function TimelineScrubber({ gameId, value, onTickChange }: TimelineScrubb
         <button
           onClick={handlePrev}
           disabled={!hasPrev}
-          className="px-2 py-1 rounded text-sm bg-gray-700 hover:bg-gray-600 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          className="px-3 py-1 rounded-full text-sm bg-gray-800 border border-gray-700 hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors"
           aria-label="Previous play"
         >
           ←
@@ -267,10 +274,10 @@ export function TimelineScrubber({ gameId, value, onTickChange }: TimelineScrubb
             key={key}
             onClick={() => handleFilterClick(key)}
             className={[
-              'px-3 py-1 rounded text-sm font-medium transition-colors',
+              'px-4 py-1 rounded-full text-sm font-medium transition-colors',
               activeFilter === key
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-700 text-gray-300 hover:bg-gray-600',
+                ? FILTER_ACTIVE_CLASS[key]
+                : 'bg-gray-800 text-gray-400 hover:bg-gray-700 border border-gray-700',
             ].join(' ')}
           >
             {label}
@@ -281,7 +288,7 @@ export function TimelineScrubber({ gameId, value, onTickChange }: TimelineScrubb
         <button
           onClick={handleNext}
           disabled={!hasNext}
-          className="px-2 py-1 rounded text-sm bg-gray-700 hover:bg-gray-600 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          className="px-3 py-1 rounded-full text-sm bg-gray-800 border border-gray-700 hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors"
           aria-label="Next play"
         >
           →
@@ -324,7 +331,7 @@ export function TimelineScrubber({ gameId, value, onTickChange }: TimelineScrubb
           max={maxTick}
           value={tick}
           onChange={handleSliderChange}
-          className="w-full h-2 bg-gray-700 rounded appearance-none cursor-pointer accent-blue-500"
+          className="w-full h-3 bg-gray-800 rounded-full appearance-none cursor-pointer accent-blue-500"
         />
         {/* PDX-56: Play tick dots — update when filter changes so the visual effect is immediate */}
         {filteredTicks.map((t) => (

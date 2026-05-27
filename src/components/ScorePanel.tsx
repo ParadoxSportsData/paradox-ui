@@ -19,31 +19,31 @@ export function ScorePanel({ homeTeam, awayTeam, play }: ScorePanelProps) {
   const awayLeads = awayScore > homeScore
 
   return (
-    <div className="bg-gray-800 rounded-lg p-4 flex items-center justify-between gap-4">
+    <div className="bg-gray-800 rounded-lg p-4 flex items-center justify-between gap-4 border border-gray-700/60">
       {/* Away team */}
       <div className="flex flex-col items-center flex-1">
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1.5 mb-1">
           {posteam === awayTeam && (
-            <span className="text-yellow-400 text-xs">▶</span>
+            <span className="text-yellow-400 text-sm">▶</span>
           )}
-          <span className="text-sm text-gray-400 font-mono">{awayTeam}</span>
+          <span className="text-xs font-mono font-bold uppercase tracking-widest text-gray-500">{awayTeam}</span>
         </div>
-        <span className={`text-3xl font-bold ${awayLeads ? 'text-white' : 'text-gray-400'}`}>
+        <span className={`text-4xl font-black tabular-nums ${awayLeads ? 'text-white' : 'text-gray-500'}`}>
           {awayScore}
         </span>
       </div>
 
-      <div className="text-gray-600 text-lg font-light">–</div>
+      <div className="text-gray-700 text-xl font-light">–</div>
 
       {/* Home team */}
       <div className="flex flex-col items-center flex-1">
-        <div className="flex items-center gap-1">
-          <span className="text-sm text-gray-400 font-mono">{homeTeam}</span>
+        <div className="flex items-center gap-1.5 mb-1">
+          <span className="text-xs font-mono font-bold uppercase tracking-widest text-gray-500">{homeTeam}</span>
           {posteam === homeTeam && (
-            <span className="text-yellow-400 text-xs">◀</span>
+            <span className="text-yellow-400 text-sm">◀</span>
           )}
         </div>
-        <span className={`text-3xl font-bold ${homeLeads ? 'text-white' : 'text-gray-400'}`}>
+        <span className={`text-4xl font-black tabular-nums ${homeLeads ? 'text-white' : 'text-gray-500'}`}>
           {homeScore}
         </span>
       </div>

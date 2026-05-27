@@ -47,6 +47,7 @@ function App() {
       <GameView
         gameId={view.gameId}
         onBack={() => setView({ mode: 'selector' })}
+        onGoToLab={() => setView({ mode: 'lab' })}
       />
     )
   }

@@ -33,14 +33,14 @@ function GameCard({
   return (
     <button
       onClick={() => onSelect(game.game_id)}
-      className="text-left bg-gray-800 rounded-lg p-4 cursor-pointer hover:ring-2 hover:ring-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-none transition"
+      className="text-left bg-gray-800 rounded-lg p-4 cursor-pointer border border-gray-700/50 hover:ring-2 hover:ring-blue-500 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/40 focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all duration-150"
     >
       <div className="flex items-center justify-between gap-2">
         <div className="text-lg font-bold text-white">
           {game.away_team} @ {game.home_team}
         </div>
         {isOT && (
-          <span className="shrink-0 text-xs font-mono bg-gray-700 text-gray-400 px-1.5 py-0.5 rounded">
+          <span className="shrink-0 text-xs font-mono bg-amber-900/60 text-amber-400 border border-amber-700/50 px-1.5 py-0.5 rounded">
             OT
           </span>
         )}
@@ -104,12 +104,16 @@ export function GameSelector({ onSelect, blindMode }: GameSelectorProps) {
 
   return (
     <div className="p-6">
-      <h2 className="text-xl font-semibold text-gray-200 mb-4">Select a Game</h2>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {query.data.map((game) => (
-          <GameCard key={game.game_id} game={game} onSelect={onSelect} blindMode={blindMode} />
-        ))}
-      </div>
+      <h2 className="text-xl font-semibold text-gray-100 mb-4">Select a Game</h2>
+      {query.data.length === 0 ? (
+        <p className="text-gray-500 text-sm">No games found. Start the server and load a game file.</p>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {query.data.map((game) => (
+            <GameCard key={game.game_id} game={game} onSelect={onSelect} blindMode={blindMode} />
+          ))}
+        </div>
+      )}
     </div>
   )
 }
