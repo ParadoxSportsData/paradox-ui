@@ -9,6 +9,39 @@ interface LabProps {
   onBack: () => void
 }
 
+function NavMenu({ onGoToGames }: { onGoToGames: () => void }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 cursor-pointer transition-colors"
+        aria-label="Navigation menu"
+        aria-expanded={open}
+      >
+        <svg width="18" height="14" viewBox="0 0 18 14" fill="currentColor">
+          <rect width="18" height="2" rx="1" />
+          <rect y="6" width="18" height="2" rx="1" />
+          <rect y="12" width="18" height="2" rx="1" />
+        </svg>
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+          <div className="absolute left-0 top-full mt-1.5 z-20 bg-gray-800 border border-gray-700/60 rounded-lg shadow-xl overflow-hidden min-w-[180px]">
+            <button
+              onClick={() => { setOpen(false); onGoToGames() }}
+              className="w-full text-left px-4 py-2.5 text-sm text-gray-300 hover:bg-gray-700 hover:text-white transition-colors cursor-pointer"
+            >
+              Game Selection
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
 function formatTime(seconds: number): string {
   const mins = Math.floor(seconds / 60)
   const secs = seconds % 60
@@ -103,14 +136,9 @@ export function Lab({ onBack }: LabProps) {
   return (
     <div className="min-h-screen bg-gray-950 text-gray-100">
       {/* Header */}
-      <header className="px-6 py-5 bg-gray-900 border-b border-gray-800 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <button
-            onClick={onBack}
-            className="text-xs font-mono px-3 py-1.5 rounded transition bg-gray-700 text-gray-300 hover:bg-gray-600"
-          >
-            Back
-          </button>
+      <header className="relative flex items-center px-4 py-3 bg-gray-900 border-b border-gray-700/60">
+        <NavMenu onGoToGames={onBack} />
+        <div className="absolute inset-x-0 flex justify-center pointer-events-none">
           <h1 className="text-2xl font-bold tracking-tight">
             The Lab <span className="text-purple-400 font-mono text-lg">Scenario Simulator</span>
           </h1>
