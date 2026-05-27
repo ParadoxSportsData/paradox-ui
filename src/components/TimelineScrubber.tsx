@@ -3,9 +3,10 @@
 // PDX-50: Play type filter buttons (All/Run/Pass/Scoring) + Prev/Next navigation.
 // PDX-56: Play tick dots on timeline bar update when filter changes (visual feedback).
 // PDX-85: Read-only Q+clock badge replaces elapsed-time text input.
-// PDX-90: isPreGameRef tracks whether user has navigated at all. nextTick() returns plays[0]
-//          (kickoff) from pre-game state instead of skipping to first play at tick>0.
-//          Slider drag to tick=0 resets to pre-game (null play) so GameView hides stats.
+// PDX-90: tick=0 is always pre-game. applyTick() enforces this invariant at the single
+//          chokepoint — any call with newTick=0 always produces a null play, regardless
+//          of the caller (arrow, slider, dot, chart sync). nextTick() from pre-game skips
+//          tick=0 plays entirely so the first → press lands on the first meaningful play.
 // Full timeline loaded once via TanStack Query. All scrubbing is local — no HTTP.
 
 import { useState, useMemo, useEffect, useRef } from 'react'
@@ -156,8 +157,16 @@ export function TimelineScrubber({ gameId, value, onTickChange }: TimelineScrubb
   }
 
   function nextTick(): { tick: number; play: PlaySnapshot } | null {
-    if (isPreGameRef.current && filteredPlays.length > 0) {
-      return { tick: filteredPlays[0].tick, play: filteredPlays[0] }
+    if (isPreGameRef.current) {
+      // Skip tick=0 plays so the first → press lands on the first play with tick > 0.
+      // (applyTick enforces tick=0→null, so going to a tick=0 play would leave isPreGame=true
+      //  and → would never advance past it.)
+      for (let i = 0; i < filteredPlays.length; i++) {
+        if (filteredPlays[i].tick > 0) {
+          return { tick: filteredPlays[i].tick, play: filteredPlays[i] }
+        }
+      }
+      return null
     }
     for (let i = 0; i < filteredPlays.length; i++) {
       if (filteredPlays[i].tick > tick) {
@@ -168,9 +177,10 @@ export function TimelineScrubber({ gameId, value, onTickChange }: TimelineScrubb
   }
 
   function applyTick(newTick: number, play: PlaySnapshot | null) {
-    isPreGameRef.current = (play === null)
+    const effectivePlay = newTick === 0 ? null : play
+    isPreGameRef.current = (effectivePlay === null)
     setTick(newTick)
-    onTickChange(newTick, play)
+    onTickChange(newTick, effectivePlay)
   }
 
   function handleSliderChange(e: React.ChangeEvent<HTMLInputElement>) {

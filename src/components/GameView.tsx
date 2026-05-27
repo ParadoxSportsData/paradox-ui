@@ -220,7 +220,7 @@ export function GameView({ gameId, onBack, onGoToLab }: GameViewProps) {
 
           {/* Stats panels — only render once a play has occurred (currentPlay !== null).
               Before the first play, currentPlay is null and stats are meaningless. */}
-          {currentPlay !== null && (
+          {currentPlay !== null && currentTick > 0 && (
             statsLoading ? (
               <StatsSkeleton />
             ) : statsData ? (
