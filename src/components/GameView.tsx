@@ -120,6 +120,11 @@ export function GameView({ gameId, onBack }: GameViewProps) {
     setCurrentPlay(play)
   }
 
+  // Chart click: only update tick — scrubber's value sync effect derives + propagates the play.
+  function handleChartSeek(tick: number) {
+    setCurrentTick(tick)
+  }
+
   return (
     <div className="min-h-screen bg-gray-950 text-gray-100 flex flex-col">
       {/* Header */}
@@ -141,12 +146,13 @@ export function GameView({ gameId, onBack }: GameViewProps) {
       <main className="flex flex-col gap-4 p-4 flex-1">
         <ErrorBoundary>
           <div className="bg-gray-900 rounded-lg">
-            <TimelineScrubber gameId={gameId} onTickChange={handleTickChange} />
+            <TimelineScrubber gameId={gameId} value={currentTick} onTickChange={handleTickChange} />
             <WinProbChart
               gameId={gameId}
               homeTeam={homeTeam}
               awayTeam={awayTeam}
               currentTick={currentTick}
+              onTickChange={handleChartSeek}
             />
           </div>
 

@@ -23,6 +23,7 @@ interface WinProbChartProps {
   homeTeam: string
   awayTeam: string
   currentTick: number
+  onTickChange?: (tick: number) => void
 }
 
 function tickToMMSS(tick: number): string {
@@ -72,7 +73,7 @@ function findNearestWp(data: { tick: number; wp: number }[], targetTick: number)
   return result.wp
 }
 
-export function WinProbChart({ gameId, homeTeam, awayTeam, currentTick }: WinProbChartProps) {
+export function WinProbChart({ gameId, homeTeam, awayTeam, currentTick, onTickChange }: WinProbChartProps) {
   const query = useQuery({
     queryKey: ['timeline', gameId],
     queryFn: () => getTimeline(gameId),
@@ -109,6 +110,15 @@ export function WinProbChart({ gameId, homeTeam, awayTeam, currentTick }: WinPro
   // Flip badge to the left when cursor is in the rightmost 15% to avoid overflow.
   const badgeOnLeft = xPct > 0.85
 
+  function handlePlotClick(e: React.MouseEvent<HTMLDivElement>) {
+    if (!onTickChange || maxTick === 0) return
+    const rect = e.currentTarget.getBoundingClientRect()
+    const plotWidth = rect.width - YAXIS_WIDTH - RIGHT_MARGIN
+    const clickX = e.clientX - rect.left - YAXIS_WIDTH
+    const clicked = Math.round(Math.max(0, Math.min(1, clickX / plotWidth)) * maxTick)
+    onTickChange(clicked)
+  }
+
   return (
     <div className="border-t border-gray-800 p-4">
       <div className="flex justify-between items-baseline text-xs mb-2">
@@ -116,7 +126,10 @@ export function WinProbChart({ gameId, homeTeam, awayTeam, currentTick }: WinPro
         <span className="text-gray-500 font-mono">{awayTeam} {awayWpLabel ?? '—'}</span>
       </div>
 
-      <div className="relative">
+      <div
+        className={`relative${onTickChange ? ' cursor-crosshair' : ''}`}
+        onClick={handlePlotClick}
+      >
         <ResponsiveContainer width="100%" height={200}>
           <AreaChart data={data} margin={{ top: 4, right: RIGHT_MARGIN, left: 0, bottom: 4 }}>
             {/*

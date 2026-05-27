@@ -5,13 +5,14 @@
 // PDX-56: Play tick dots on timeline bar update when filter changes (visual feedback).
 // Full timeline loaded once via TanStack Query. All scrubbing is local — no HTTP.
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getTimeline } from '../api/client'
 import type { PlaySnapshot } from '../api/schemas'
 
 interface TimelineScrubberProps {
   gameId: string
+  value?: number  // optional controlled tick — set externally (e.g. chart click)
   onTickChange: (tick: number, play: PlaySnapshot | null) => void
 }
 
@@ -105,7 +106,7 @@ const FILTER_LABELS: { key: FilterKey; label: string }[] = [
 const QUARTER_TICKS = [900, 1800, 2700, 3600]
 const QUARTER_LABELS = ['Q1', 'Q2', 'Q3', 'Q4']
 
-export function TimelineScrubber({ gameId, onTickChange }: TimelineScrubberProps) {
+export function TimelineScrubber({ gameId, value, onTickChange }: TimelineScrubberProps) {
   const [tick, setTick] = useState(0)
   // PDX-50
   const [activeFilter, setActiveFilter] = useState<FilterKey>('all')
@@ -118,6 +119,15 @@ export function TimelineScrubber({ gameId, onTickChange }: TimelineScrubberProps
   })
 
   const maxTick = query.data?.max_tick ?? 3600
+
+  // Sync slider when an external caller (e.g. chart click) drives the tick.
+  useEffect(() => {
+    if (value === undefined || value === tick) return
+    const play = query.data ? findNearestPlay(query.data.plays, value) : null
+    setTick(value)
+    setTimeInputValue(tickToMMSS(value))
+    onTickChange(value, play)
+  }, [value]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // PDX-50: derive filtered ticks from timeline data + active filter
   const filteredPlays = useMemo<PlaySnapshot[]>(() => {
