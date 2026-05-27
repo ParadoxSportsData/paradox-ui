@@ -1,5 +1,7 @@
 // src/components/WinProbChart.tsx
 // PDX-26: Recharts LineChart of win probability over game timeline.
+// PDX-51: Area fill with green/red linearGradient (green above 50%, red below).
+// PDX-52: Custom tooltip showing elapsed time, home Win%, and score.
 // Shares ['timeline', gameId] query key with TimelineScrubber — zero extra fetches.
 // Filters out plays with null win_prob to avoid line discontinuities.
 // Cursor is a CSS overlay (not a Recharts ReferenceLine) so it moves without SVG re-render.
@@ -7,8 +9,8 @@
 import { useQuery } from '@tanstack/react-query'
 import {
   ResponsiveContainer,
-  LineChart,
-  Line,
+  AreaChart,
+  Area,
   XAxis,
   YAxis,
   ReferenceLine,
@@ -36,6 +38,27 @@ const QUARTER_LABELS = ['Q1', 'Q2', 'Q3', 'Q4']
 const YAXIS_WIDTH = 40      // <YAxis width={40} />
 const RIGHT_MARGIN = 16     // <LineChart margin={{ right: 16 }} />
 const PLOT_OFFSET = YAXIS_WIDTH + RIGHT_MARGIN  // total horizontal overhead
+
+// PDX-52: Custom tooltip component showing elapsed time, home Win%, and score.
+interface WpTooltipProps {
+  active?: boolean
+  payload?: Array<{ payload: { tick: number; wp: number; homeScore: number; awayScore: number } }>
+  label?: number
+  homeTeam: string
+  awayTeam: string
+}
+
+function WpTooltip({ active, payload, label, homeTeam, awayTeam }: WpTooltipProps) {
+  if (!active || !payload?.length) return null
+  const { wp, homeScore, awayScore } = payload[0].payload
+  return (
+    <div style={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: 6, padding: '8px 10px' }}>
+      <div style={{ color: '#d1d5db', fontSize: 11 }}>{tickToMMSS(label ?? 0)}</div>
+      <div style={{ color: '#93c5fd', fontSize: 12 }}>{homeTeam} Win {(wp * 100).toFixed(1)}%</div>
+      <div style={{ color: '#9ca3af', fontSize: 11 }}>{homeTeam} {homeScore} – {awayTeam} {awayScore}</div>
+    </div>
+  )
+}
 
 // Binary search: nearest wp value at or before targetTick.
 function findNearestWp(data: { tick: number; wp: number }[], targetTick: number): number | null {
@@ -67,9 +90,10 @@ export function WinProbChart({ gameId, homeTeam, awayTeam, currentTick }: WinPro
     return null
   }
 
+  // PDX-52: include homeScore and awayScore per tick for tooltip display.
   const data = query.data.plays
     .filter((p) => p.win_prob !== null)
-    .map((p) => ({ tick: p.tick, wp: p.win_prob as number }))
+    .map((p) => ({ tick: p.tick, wp: p.win_prob as number, homeScore: p.home_score, awayScore: p.away_score }))
 
   const maxTick = query.data.max_tick
 
@@ -94,7 +118,23 @@ export function WinProbChart({ gameId, homeTeam, awayTeam, currentTick }: WinPro
 
       <div className="relative">
         <ResponsiveContainer width="100%" height={200}>
-          <LineChart data={data} margin={{ top: 4, right: RIGHT_MARGIN, left: 0, bottom: 4 }}>
+          <AreaChart data={data} margin={{ top: 4, right: RIGHT_MARGIN, left: 0, bottom: 4 }}>
+            {/*
+              PDX-51: Green/red linearGradient anchored to Y-axis domain [0,1].
+              gradientUnits="userSpaceOnUse" with y1/y2 as percentage strings is not
+              supported in all browsers, so we use objectBoundingBox percentages:
+                0%   → top of chart = WP 1.0 → green
+                50%  → midpoint    = WP 0.5 → transition
+                100% → bottom      = WP 0.0 → red
+              This maps exactly to the [0,1] domain since Recharts fills the plot top-to-bottom.
+            */}
+            <defs>
+              <linearGradient id="wpGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%"   stopColor="rgba(34,197,94,0.35)" />
+                <stop offset="50%"  stopColor="rgba(156,163,175,0.15)" />
+                <stop offset="100%" stopColor="rgba(239,68,68,0.35)" />
+              </linearGradient>
+            </defs>
             <XAxis
               dataKey="tick"
               domain={[0, maxTick]}
@@ -111,13 +151,8 @@ export function WinProbChart({ gameId, homeTeam, awayTeam, currentTick }: WinPro
               axisLine={false}
               width={YAXIS_WIDTH}
             />
-            <Tooltip
-              formatter={(value: unknown) => [`${((value as number) * 100).toFixed(1)}%`, `${homeTeam} Win`]}
-              labelFormatter={(label: unknown) => tickToMMSS(label as number)}
-              contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: 6 }}
-              labelStyle={{ color: '#d1d5db' }}
-              itemStyle={{ color: '#93c5fd' }}
-            />
+            {/* PDX-52: Custom tooltip showing time, home Win%, and score */}
+            <Tooltip content={<WpTooltip homeTeam={homeTeam} awayTeam={awayTeam} />} />
             {/* 50% baseline */}
             <ReferenceLine y={0.5} stroke="#6b7280" strokeDasharray="3 3" />
             {/* Quarter boundary lines */}
@@ -130,15 +165,17 @@ export function WinProbChart({ gameId, homeTeam, awayTeam, currentTick }: WinPro
                 label={{ value: QUARTER_LABELS[i], fill: '#6b7280', fontSize: 10, position: 'top' }}
               />
             ))}
-            <Line
+            {/* PDX-51: Area replaces Line; fill uses green/red gradient */}
+            <Area
               type="monotone"
               dataKey="wp"
               stroke="#3b82f6"
               strokeWidth={2}
+              fill="url(#wpGradient)"
               dot={false}
               isAnimationActive={false}
             />
-          </LineChart>
+          </AreaChart>
         </ResponsiveContainer>
 
         {/* CSS cursor overlay — updates left only, no SVG re-render */}
