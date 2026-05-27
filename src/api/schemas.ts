@@ -13,6 +13,9 @@ export const GameSummarySchema = z.object({
   home_score: z.number(),
   away_score: z.number(),
   duration: z.number(),
+  game_date: z.string().optional(), // ISO-8601, absent if backend pre-PDX-81
+  week: z.number().optional(),
+  season: z.number().optional(),
 })
 
 export const GameStateResponseSchema = z.object({

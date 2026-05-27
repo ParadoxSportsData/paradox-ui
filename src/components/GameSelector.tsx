@@ -1,11 +1,12 @@
 // src/components/GameSelector.tsx
-// PDX-23: Lists games from /games (or MOCK). Renders a card grid.
-// useQuery only — no useEffect fetch.
+// PDX-23: Lists games from /games. Renders a card grid.
 // PDX-54: OT badge on cards when duration > 3600.
 // PDX-55: blindMode masks final scores until user reveals them.
+// PDX-83: Human-readable game date, week label, FINAL/FINAL—OT status, team display names.
 
 import { useQuery } from '@tanstack/react-query'
 import { listGames } from '../api/client'
+import { getDisplayName } from '../lib/nflTeams'
 import type { GameSummary } from '../api/schemas'
 
 interface GameSelectorProps {
@@ -13,10 +14,18 @@ interface GameSelectorProps {
   blindMode: boolean
 }
 
-function formatDuration(seconds: number): string {
-  const m = Math.floor(seconds / 60)
-  const s = seconds % 60
-  return `${m}:${String(s).padStart(2, '0')}`
+// formatGameDate converts an ISO-8601 date string to a human-readable label.
+// Appends Z to force UTC parsing so negative-offset timezones don't shift to prior day.
+function formatGameDate(isoDate: string | undefined, week: number | undefined): string {
+  if (!isoDate) return week != null ? `Week ${week}` : ''
+  const date = new Date(isoDate.endsWith('Z') ? isoDate : `${isoDate}Z`)
+  const formatted = date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    timeZone: 'UTC',
+  })
+  return week != null ? `${formatted} — Week ${week}` : formatted
 }
 
 function GameCard({
@@ -29,34 +38,48 @@ function GameCard({
   blindMode: boolean
 }) {
   const isOT = game.duration > 3600
+  const awayDisplay = getDisplayName(game.away_team)
+  const homeDisplay = getDisplayName(game.home_team)
+  const dateLabel = formatGameDate(game.game_date, game.week)
 
   return (
     <button
       onClick={() => onSelect(game.game_id)}
       className="text-left bg-gray-800 rounded-lg p-4 cursor-pointer border border-gray-700/50 hover:ring-2 hover:ring-blue-500 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/40 focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all duration-150"
     >
-      <div className="flex items-center justify-between gap-2">
-        <div className="text-lg font-bold text-white">
-          {game.away_team} @ {game.home_team}
-        </div>
-        {isOT && (
-          <span className="shrink-0 text-xs font-mono bg-amber-900/60 text-amber-400 border border-amber-700/50 px-1.5 py-0.5 rounded">
-            OT
-          </span>
-        )}
+      {/* Date + week */}
+      {dateLabel && (
+        <div className="text-xs text-gray-500 mb-1.5">{dateLabel}</div>
+      )}
+
+      {/* Matchup */}
+      <div className="text-base font-bold text-white leading-tight">
+        {awayDisplay}
+        <span className="text-gray-500 font-normal"> @ </span>
+        {homeDisplay}
       </div>
-      <div className="text-2xl font-mono mt-1">
+
+      {/* Score */}
+      <div className="text-2xl font-mono mt-2">
         {blindMode ? (
           <span className="text-blue-300 blur-md select-none" aria-hidden="true">00 – 00</span>
         ) : (
           <span className="text-blue-300">{game.home_score} – {game.away_score}</span>
         )}
       </div>
-      <div className="text-sm text-gray-400 mt-2">
-        {game.game_id.replace(/_/g, ' ')}
-      </div>
-      <div className="text-xs text-gray-500 mt-1">
-        Duration: {formatDuration(game.duration)}
+
+      {/* Status badge row */}
+      <div className="flex items-center gap-2 mt-2">
+        {isOT ? (
+          <>
+            <span className="text-xs font-semibold text-gray-300 tracking-wide">FINAL</span>
+            <span className="text-xs font-mono bg-amber-900/60 text-amber-400 border border-amber-700/50 px-1.5 py-0.5 rounded">
+              OT
+            </span>
+          </>
+        ) : (
+          <span className="text-xs font-semibold text-gray-300 tracking-wide">FINAL</span>
+        )}
       </div>
     </button>
   )
@@ -65,10 +88,10 @@ function GameCard({
 function SkeletonCard() {
   return (
     <div className="bg-gray-800 rounded-lg p-4 animate-pulse">
+      <div className="h-3 bg-gray-700 rounded w-1/2 mb-2" />
       <div className="h-5 bg-gray-600 rounded w-3/4 mb-2" />
       <div className="h-7 bg-gray-600 rounded w-1/2 mb-2" />
-      <div className="h-4 bg-gray-700 rounded w-full mb-1" />
-      <div className="h-3 bg-gray-700 rounded w-1/3" />
+      <div className="h-4 bg-gray-700 rounded w-1/4" />
     </div>
   )
 }
