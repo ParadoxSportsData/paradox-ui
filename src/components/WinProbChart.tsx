@@ -49,7 +49,7 @@ function findNearestWp(data: { tick: number; wp: number }[], targetTick: number)
   return result.wp
 }
 
-export function WinProbChart({ gameId, homeTeam, currentTick }: WinProbChartProps) {
+export function WinProbChart({ gameId, homeTeam, awayTeam, currentTick }: WinProbChartProps) {
   const query = useQuery({
     queryKey: ['timeline', gameId],
     queryFn: () => getTimeline(gameId),
@@ -80,13 +80,17 @@ export function WinProbChart({ gameId, homeTeam, currentTick }: WinProbChartProp
 
   const nearestWp = findNearestWp(data, currentTick)
   const wpLabel = nearestWp !== null ? `${Math.round(nearestWp * 100)}%` : null
+  const awayWpLabel = nearestWp !== null ? `${Math.round((1 - nearestWp) * 100)}%` : null
 
   // Flip badge to the left when cursor is in the rightmost 15% to avoid overflow.
   const badgeOnLeft = xPct > 0.85
 
   return (
     <div className="border-t border-gray-800 p-4">
-      <div className="text-xs text-gray-400 mb-2">{homeTeam} Win %</div>
+      <div className="flex justify-between items-baseline text-xs mb-2">
+        <span className="text-blue-400 font-mono font-semibold">{homeTeam} {wpLabel ?? 'Win %'}</span>
+        <span className="text-gray-500 font-mono">{awayTeam} {awayWpLabel ?? '—'}</span>
+      </div>
 
       <div className="relative">
         <ResponsiveContainer width="100%" height={200}>
