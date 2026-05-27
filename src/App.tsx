@@ -2,8 +2,9 @@
 // PDX-28: Top-level app shell. Routes between GameSelector, GameView, and Lab.
 // PDX-55: blindMode applies to game selection only — masks final scores on cards.
 // PDX-66: View discriminated union replaces selectedGameId binary state.
+// PDX-86: Hash-based routing — each view maps to a URL hash so browser back/forward work.
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { GameSelector } from './components/GameSelector'
 import { GameView } from './components/GameView'
 import { Lab } from './components/Lab'
@@ -12,6 +13,16 @@ type View =
   | { mode: 'selector' }
   | { mode: 'game'; gameId: string }
   | { mode: 'lab' }
+
+function parseUrl(): View {
+  const hash = window.location.hash
+  if (hash.startsWith('#/game/')) {
+    const gameId = decodeURIComponent(hash.slice(7))
+    if (gameId) return { mode: 'game', gameId }
+  }
+  if (hash === '#/lab') return { mode: 'lab' }
+  return { mode: 'selector' }
+}
 
 function BlindModeButton({ blindMode, onToggle }: { blindMode: boolean; onToggle: () => void }) {
   return (
@@ -29,10 +40,26 @@ function BlindModeButton({ blindMode, onToggle }: { blindMode: boolean; onToggle
 }
 
 function App() {
-  const [view, setView] = useState<View>({ mode: 'selector' })
+  const [view, setView] = useState<View>(parseUrl)
   const [blindMode, setBlindMode] = useState(
     () => localStorage.getItem('blindMode') === 'true'
   )
+
+  // Sync React state with browser back/forward navigation.
+  useEffect(() => {
+    const onPop = () => setView(parseUrl())
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [])
+
+  function navigate(newView: View) {
+    const url =
+      newView.mode === 'game' ? `#/game/${encodeURIComponent(newView.gameId)}`
+      : newView.mode === 'lab' ? '#/lab'
+      : '/'
+    window.history.pushState(null, '', url)
+    setView(newView)
+  }
 
   function toggleBlindMode() {
     setBlindMode(prev => {
@@ -46,25 +73,25 @@ function App() {
     return (
       <GameView
         gameId={view.gameId}
-        onBack={() => setView({ mode: 'selector' })}
-        onGoToLab={() => setView({ mode: 'lab' })}
+        onBack={() => navigate({ mode: 'selector' })}
+        onGoToLab={() => navigate({ mode: 'lab' })}
       />
     )
   }
 
   if (view.mode === 'lab') {
-    return <Lab onBack={() => setView({ mode: 'selector' })} />
+    return <Lab onBack={() => navigate({ mode: 'selector' })} />
   }
 
   return (
     <div className="min-h-screen bg-gray-950 text-gray-100">
       <header className="px-6 py-5 bg-gray-900 border-b border-gray-800 flex items-center justify-between">
-        <h1 className="text-2xl font-bold tracking-tight">
-          clock-gate <span className="text-blue-400 font-mono text-lg">UI</span>
+        <h1 className="text-2xl font-bold tracking-tight text-white">
+          Paradox
         </h1>
         <div className="flex items-center gap-2">
           <button
-            onClick={() => setView({ mode: 'lab' })}
+            onClick={() => navigate({ mode: 'lab' })}
             className="text-xs font-mono px-3 py-1.5 rounded transition bg-purple-700 text-gray-100 hover:bg-purple-600"
           >
             The Lab
@@ -73,7 +100,7 @@ function App() {
         </div>
       </header>
       <GameSelector
-        onSelect={(gameId) => setView({ mode: 'game', gameId })}
+        onSelect={(gameId) => navigate({ mode: 'game', gameId })}
         blindMode={blindMode}
       />
     </div>
