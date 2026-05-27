@@ -1,5 +1,6 @@
 // src/components/TeamStatsPanel.tsx
 // PDX-37: Two-column team stats comparison — traditional box score layout.
+// PDX-73: Away on LEFT, home on RIGHT — matches broadcast convention and WinProbChart layout.
 // Pure display: no API calls, no hooks. Caller handles loading/null state.
 
 import type { TeamStats } from '../api/stats'
@@ -69,15 +70,15 @@ export function TeamStatsPanel({ homeTeam, awayTeam, homeStats, awayStats }: Tea
         <span className="text-left text-sm font-semibold text-blue-400">{homeTeam}</span>
       </div>
 
-      {/* Stat rows */}
+      {/* Stat rows: away LEFT, label CENTER, home RIGHT */}
       {rows.map((row) => (
         <div
           key={row.label}
           className="grid grid-cols-3 text-sm py-0.5 even:bg-gray-900/40 hover:bg-gray-700/50 rounded"
         >
-          <span className="text-right text-white font-mono">{row.home}</span>
+          <span className="text-right text-white font-mono">{row.away}</span>
           <span className="text-center text-gray-500 text-xs">{row.label}</span>
-          <span className="text-left text-white font-mono">{row.away}</span>
+          <span className="text-left text-white font-mono">{row.home}</span>
         </div>
       ))}
     </div>
