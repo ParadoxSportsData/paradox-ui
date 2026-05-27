@@ -322,7 +322,7 @@ export function TimelineScrubber({ gameId, value, onTickChange }: TimelineScrubb
       {/* Elapsed / max labels */}
       <div className="flex justify-between text-xs text-gray-400 mb-1">
         <span>Q{quarter} — {displayTime}</span>
-        <span>{tickToMMSS(maxTick)}</span>
+        <span>{maxTick > 3600 ? 'OT' : 'Final'}</span>
       </div>
 
       {/* Slider + quarter markers + play tick dots */}
@@ -372,7 +372,7 @@ export function TimelineScrubber({ gameId, value, onTickChange }: TimelineScrubb
               {/* Tooltip above dot */}
               {isHovered && (
                 <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-gray-900 border border-gray-700 rounded px-1.5 py-0.5 text-xs text-gray-200 whitespace-nowrap z-20 pointer-events-none shadow-lg">
-                  {tickToMMSS(t)} · {play.play_type}
+                  {`${play.quarter === 5 ? 'OT' : `Q${play.quarter}`} ${tickToQtrClock(play.quarter, t)} · ${play.play_type}`}
                 </div>
               )}
             </div>

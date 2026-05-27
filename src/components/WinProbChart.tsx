@@ -30,12 +30,6 @@ interface WinProbChartProps {
   onTickChange?: (tick: number) => void
 }
 
-function tickToMMSS(tick: number): string {
-  const m = Math.floor(tick / 60)
-  const s = tick % 60
-  return `${m}:${String(s).padStart(2, '0')}`
-}
-
 // Quarter + clock-remaining format matching game state bar convention.
 function tickToQtrClock(tick: number): string {
   const quarter = Math.min(Math.ceil((tick + 1) / 900), 5)
@@ -113,7 +107,15 @@ export function WinProbChart({ gameId, homeTeam, awayTeam, currentTick, onTickCh
     )
   }
 
-  if (query.isError || !query.data) return null
+  if (query.isError || !query.data) {
+    return (
+      <div className="border-t border-gray-800 p-4">
+        <div className="h-48 flex items-center justify-center text-gray-500 text-xs">
+          Win probability unavailable
+        </div>
+      </div>
+    )
+  }
 
   const data: ChartPoint[] = query.data.plays
     .filter(p => p.win_prob !== null)
