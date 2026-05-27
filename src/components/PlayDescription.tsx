@@ -1,8 +1,7 @@
 // src/components/PlayDescription.tsx
 // PDX-27: Pure display — play description text with play_type badge.
-// Expand toggle for descriptions > 200 chars.
+// Fixed height (h-44) with overflow-y-auto so layout never shifts on long descriptions.
 
-import { useState } from 'react'
 import type { PlaySnapshot } from '../api/schemas'
 
 interface PlayDescriptionProps {
@@ -21,26 +20,19 @@ function badgeClass(playType: string): string {
   return BADGE_CLASSES[playType] ?? 'bg-gray-700 text-gray-400'
 }
 
-const MAX_LEN = 200
-
 export function PlayDescription({ play }: PlayDescriptionProps) {
-  const [expanded, setExpanded] = useState(false)
-
   if (play === null) {
     return (
-      <div className="bg-gray-800 rounded-lg p-4">
+      <div className="bg-gray-800 rounded-lg p-4 h-44 flex items-center">
         <p className="text-gray-500 italic text-sm">Waiting for kickoff…</p>
       </div>
     )
   }
 
   const { play_type, description } = play
-  const text = description || '–'
-  const needsTruncation = text.length > MAX_LEN
-  const displayText = needsTruncation && !expanded ? text.slice(0, MAX_LEN) + '…' : text
 
   return (
-    <div className="bg-gray-800 rounded-lg p-4">
+    <div className="bg-gray-800 rounded-lg p-4 h-44 overflow-y-auto">
       <div className="flex items-center gap-2 mb-2">
         <div className="text-xs text-gray-500 uppercase tracking-wide">Last Play</div>
         {play_type && (
@@ -49,15 +41,7 @@ export function PlayDescription({ play }: PlayDescriptionProps) {
           </span>
         )}
       </div>
-      <p className="text-gray-200 text-sm leading-relaxed">{displayText}</p>
-      {needsTruncation && (
-        <button
-          onClick={() => setExpanded((e) => !e)}
-          className="text-blue-400 hover:text-blue-300 text-xs mt-1"
-        >
-          {expanded ? 'Show less' : 'Show more'}
-        </button>
-      )}
+      <p className="text-gray-200 text-sm leading-relaxed">{description || '–'}</p>
     </div>
   )
 }
