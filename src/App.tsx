@@ -1,7 +1,9 @@
 // src/App.tsx
 // PDX-28: Top-level app shell. Routes between GameSelector list view and GameView.
 // No router library — single selectedGameId state drives the two-screen flow.
-// PDX-55: blindMode state lifted here so it persists across game selection and game view.
+// PDX-55: blindMode applies to game selection only — masks final scores on cards
+// so the user can choose a game without knowing the result. Inside GameView,
+// scores are always visible (you're watching the game unfold from 0).
 
 import { useState } from 'react'
 import { GameSelector } from './components/GameSelector'
@@ -41,8 +43,6 @@ function App() {
       <GameView
         gameId={selectedGameId}
         onBack={() => setSelectedGameId(null)}
-        blindMode={blindMode}
-        onToggleBlindMode={toggleBlindMode}
       />
     )
   }
