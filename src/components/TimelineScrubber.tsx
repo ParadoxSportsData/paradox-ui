@@ -3,9 +3,12 @@
 // PDX-50: Play type filter buttons (All/Run/Pass/Scoring) + Prev/Next navigation.
 // PDX-56: Play tick dots on timeline bar update when filter changes (visual feedback).
 // PDX-85: Read-only Q+clock badge replaces elapsed-time text input.
+// PDX-90: isPreGameRef tracks whether user has navigated at all. nextTick() returns plays[0]
+//          (kickoff) from pre-game state instead of skipping to first play at tick>0.
+//          Slider drag to tick=0 resets to pre-game (null play) so GameView hides stats.
 // Full timeline loaded once via TanStack Query. All scrubbing is local — no HTTP.
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getTimeline } from '../api/client'
 import type { PlaySnapshot } from '../api/schemas'
@@ -97,6 +100,8 @@ export function TimelineScrubber({ gameId, value, onTickChange }: TimelineScrubb
   const [activeFilter, setActiveFilter] = useState<FilterKey>('all')
   // PDX-72: hover state for clickable dot tooltips
   const [hoveredTick, setHoveredTick] = useState<number | null>(null)
+  // PDX-90: tracks pre-game state — true until first navigation; drives nextTick to include tick=0 plays.
+  const isPreGameRef = useRef(true)
 
   const query = useQuery({
     queryKey: ['timeline', gameId],
@@ -108,6 +113,13 @@ export function TimelineScrubber({ gameId, value, onTickChange }: TimelineScrubb
   // Sync slider when an external caller (e.g. chart click) drives the tick.
   useEffect(() => {
     if (value === undefined || value === tick) return
+    if (value === 0) {
+      isPreGameRef.current = true
+      setTick(0)
+      onTickChange(0, null)
+      return
+    }
+    isPreGameRef.current = false
     const play = query.data ? findNearestPlay(query.data.plays, value) : null
     setTick(value)
     onTickChange(value, play)
@@ -133,6 +145,7 @@ export function TimelineScrubber({ gameId, value, onTickChange }: TimelineScrubb
   const filteredTicks = useMemo(() => filteredPlays.map((p) => p.tick), [filteredPlays])
 
   // PDX-50: Prev/Next helpers — linear scan is fine for ≤~150 plays
+  // PDX-90: isPreGameRef=true means no navigation yet — nextTick goes to plays[0] regardless of tick comparison.
   function prevTick(): { tick: number; play: PlaySnapshot } | null {
     for (let i = filteredPlays.length - 1; i >= 0; i--) {
       if (filteredPlays[i].tick < tick) {
@@ -143,6 +156,9 @@ export function TimelineScrubber({ gameId, value, onTickChange }: TimelineScrubb
   }
 
   function nextTick(): { tick: number; play: PlaySnapshot } | null {
+    if (isPreGameRef.current && filteredPlays.length > 0) {
+      return { tick: filteredPlays[0].tick, play: filteredPlays[0] }
+    }
     for (let i = 0; i < filteredPlays.length; i++) {
       if (filteredPlays[i].tick > tick) {
         return { tick: filteredPlays[i].tick, play: filteredPlays[i] }
@@ -152,6 +168,7 @@ export function TimelineScrubber({ gameId, value, onTickChange }: TimelineScrubb
   }
 
   function applyTick(newTick: number, play: PlaySnapshot | null) {
+    isPreGameRef.current = (play === null)
     setTick(newTick)
     onTickChange(newTick, play)
   }
@@ -164,6 +181,11 @@ export function TimelineScrubber({ gameId, value, onTickChange }: TimelineScrubb
     if (activeFilter !== 'all' && filteredPlays.length > 0) {
       const target = findClosestPlay(filteredPlays, newTick)
       if (target) { applyTick(target.tick, target); return }
+    }
+    // PDX-90: slider dragged to minimum = pre-game state; pass null so GameView hides stats.
+    if (activeFilter === 'all' && newTick === 0) {
+      applyTick(0, null)
+      return
     }
     const play = query.data ? findNearestPlay(query.data.plays, newTick) : null
     applyTick(newTick, play)
