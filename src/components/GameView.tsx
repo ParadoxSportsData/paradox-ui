@@ -177,7 +177,6 @@ export function GameView({ gameId, onBack, blindMode, onToggleBlindMode }: GameV
             <DownDistance play={currentPlay} />
             <PlayDescription play={currentPlay} />
           </div>
-<<<<<<< HEAD
 
           {/* Stats panels — skeleton only on initial load; subsequent updates swap in place */}
           {statsLoading ? (
