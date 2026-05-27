@@ -16,12 +16,13 @@ interface TimelineScrubberProps {
   onTickChange: (tick: number, play: PlaySnapshot | null) => void
 }
 
-// O(log N) binary search: largest play.tick <= targetTick (floor)
+// O(log N) binary search: largest play.tick <= targetTick (floor).
+// Returns null when targetTick is before the first play — no state has occurred yet.
 function findNearestPlay(plays: PlaySnapshot[], targetTick: number): PlaySnapshot | null {
   if (plays.length === 0) return null
   let lo = 0
   let hi = plays.length - 1
-  let result = plays[0]
+  let result: PlaySnapshot | null = null
   while (lo <= hi) {
     const mid = (lo + hi) >> 1
     if (plays[mid].tick <= targetTick) {
