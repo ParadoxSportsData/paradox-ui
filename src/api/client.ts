@@ -49,7 +49,8 @@ export async function getTimeline(gameId: string): Promise<GameTimelineResponse>
     throw new Error(`getTimeline(${gameId}): ${res.status} ${res.statusText}`)
   }
   const data = await res.json()
-  return GameTimelineResponseSchema.parse(data)
+  const parsed = GameTimelineResponseSchema.parse(data)
+  return { ...parsed, plays: [...parsed.plays].sort((a, b) => a.tick - b.tick) }
 }
 
 export async function getState(gameId: string, tick: number): Promise<GameStateResponse> {
