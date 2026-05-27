@@ -70,7 +70,7 @@ export function TimelineScrubber({ gameId, onTickChange }: TimelineScrubberProps
 
   if (query.isLoading) {
     return (
-      <div className="px-6 py-4">
+      <div className="pl-12 pr-6 py-4">
         <div className="h-8 bg-gray-700 rounded animate-pulse" />
         <div className="text-gray-500 text-sm mt-1">Loading timeline…</div>
       </div>
@@ -79,12 +79,12 @@ export function TimelineScrubber({ gameId, onTickChange }: TimelineScrubberProps
 
   if (query.isError) {
     return (
-      <div className="px-6 py-2 text-red-400 text-sm">Timeline unavailable</div>
+      <div className="pl-12 pr-6 py-2 text-red-400 text-sm">Timeline unavailable</div>
     )
   }
 
   return (
-    <div className="px-6 py-4">
+    <div className="pl-12 pr-6 py-4">
       <div className="flex justify-between text-xs text-gray-400 mb-1">
         <span>Q{quarter} — {displayTime}</span>
         <span>{tickToMMSS(maxTick)}</span>
