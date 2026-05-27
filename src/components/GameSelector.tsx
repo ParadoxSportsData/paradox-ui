@@ -46,11 +46,9 @@ function GameCard({
         )}
       </div>
       <div className="text-2xl font-mono mt-1">
-        {blindMode ? (
-          <span className="text-gray-600">? – ?</span>
-        ) : (
-          <span className="text-blue-300">{game.home_score} – {game.away_score}</span>
-        )}
+        <span className={`text-blue-300 transition-[filter] duration-200 ${blindMode ? 'blur-sm select-none' : ''}`}>
+          {game.home_score} – {game.away_score}
+        </span>
       </div>
       <div className="text-sm text-gray-400 mt-2">
         {game.game_id.replace(/_/g, ' ')}
