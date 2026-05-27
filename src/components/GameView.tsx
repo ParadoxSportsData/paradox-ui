@@ -1,7 +1,8 @@
 // src/components/GameView.tsx
 // PDX-28: Responsive shell composing all components.
-// PDX-36: Parallel stats fetch from paradox-stats on tick change (debounced 150ms).
+// PDX-36: Parallel stats fetch from paradox-stats on tick change (interval-based).
 // PDX-39: TeamStatsPanel + PlayerStatsPanel wired below game state panel.
+// PDX-55: blindMode hides scores and WP chart until user reveals them.
 
 import { useState, useEffect, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
@@ -24,6 +25,8 @@ const STATS_INTERVAL_MS = 100
 interface GameViewProps {
   gameId: string
   onBack: () => void
+  blindMode: boolean
+  onToggleBlindMode: () => void
 }
 
 function StatsSkeleton() {
@@ -36,7 +39,7 @@ function StatsSkeleton() {
   )
 }
 
-export function GameView({ gameId, onBack }: GameViewProps) {
+export function GameView({ gameId, onBack, blindMode, onToggleBlindMode }: GameViewProps) {
   const [currentPlay, setCurrentPlay] = useState<PlaySnapshot | null>(null)
   const [currentTick, setCurrentTick] = useState(0)
   const [statsData, setStatsData] = useState<StatsResponse | null>(null)
@@ -133,28 +136,48 @@ export function GameView({ gameId, onBack }: GameViewProps) {
         <h1 className="text-lg font-semibold text-white">
           {awayTeam} @ {homeTeam}
         </h1>
-        <span className="text-xs text-gray-500 font-mono ml-auto">{gameId}</span>
+        <div className="ml-auto flex items-center gap-3">
+          <button
+            onClick={onToggleBlindMode}
+            className={`text-xs font-mono px-3 py-1.5 rounded transition ${
+              blindMode
+                ? 'bg-amber-500 text-gray-950 font-semibold hover:bg-amber-400'
+                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+            }`}
+          >
+            {blindMode ? 'Reveal Scores' : 'Blind Mode'}
+          </button>
+          <span className="text-xs text-gray-500 font-mono">{gameId}</span>
+        </div>
       </header>
 
       <main className="flex flex-col gap-4 p-4 flex-1">
         <ErrorBoundary>
-          {/* Scrubber + chart — single cohesive control block, one slider drives both */}
+          {/* Scrubber + chart — scrubber always visible; WP chart hidden in blind mode */}
           <div className="bg-gray-900 rounded-lg">
             <TimelineScrubber gameId={gameId} onTickChange={handleTickChange} />
-            <WinProbChart
-              gameId={gameId}
-              homeTeam={homeTeam}
-              awayTeam={awayTeam}
-              currentTick={currentTick}
-            />
+            {!blindMode && (
+              <WinProbChart
+                gameId={gameId}
+                homeTeam={homeTeam}
+                awayTeam={awayTeam}
+                currentTick={currentTick}
+              />
+            )}
           </div>
 
           {/* Game state panels — directly below the visual block */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <ScorePanel homeTeam={homeTeam} awayTeam={awayTeam} play={currentPlay} />
+            <ScorePanel
+              homeTeam={homeTeam}
+              awayTeam={awayTeam}
+              play={currentPlay}
+              blindMode={blindMode}
+            />
             <DownDistance play={currentPlay} />
             <PlayDescription play={currentPlay} />
           </div>
+<<<<<<< HEAD
 
           {/* Stats panels — skeleton only on initial load; subsequent updates swap in place */}
           {statsLoading ? (
