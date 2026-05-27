@@ -89,9 +89,14 @@ export interface StatsResponse {
   }
 }
 
-export async function fetchGameStats(gameId: string, tick: number): Promise<StatsResponse> {
+export async function fetchGameStats(
+  gameId: string,
+  tick: number,
+  signal?: AbortSignal,
+): Promise<StatsResponse> {
   const res = await fetch(
-    `${STATS_URL}/game/${encodeURIComponent(gameId)}/stats?tick=${tick}`
+    `${STATS_URL}/game/${encodeURIComponent(gameId)}/stats?tick=${tick}`,
+    { signal },
   )
   if (!res.ok) {
     throw new Error(`fetchGameStats(${gameId}, ${tick}): ${res.status} ${res.statusText}`)

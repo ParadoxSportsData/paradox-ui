@@ -18,7 +18,8 @@ import { fetchGameStats } from '../api/stats'
 import type { PlaySnapshot } from '../api/schemas'
 import type { StatsResponse } from '../api/stats'
 
-const STATS_DEBOUNCE_MS = 150
+// Poll every 100ms so stats update live while scrubbing, not just on release.
+const STATS_INTERVAL_MS = 100
 
 interface GameViewProps {
   gameId: string
@@ -41,7 +42,10 @@ export function GameView({ gameId, onBack }: GameViewProps) {
   const [statsData, setStatsData] = useState<StatsResponse | null>(null)
   const [statsLoading, setStatsLoading] = useState(false)
   const [statsError, setStatsError] = useState(false)
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const abortRef = useRef<AbortController | null>(null)
+  const latestTickRef = useRef(currentTick)
+  const lastFetchedTickRef = useRef(-1)
+  const firstLoadDoneRef = useRef(false)
 
   // Read game metadata from cached timeline — no extra fetch
   const timelineQuery = useQuery({
@@ -56,35 +60,59 @@ export function GameView({ gameId, onBack }: GameViewProps) {
   const homeTeam = canonicalData?.home_team ?? '—'
   const awayTeam = canonicalData?.away_team ?? '—'
 
-  // Debounced stats fetch: fires 150ms after tick settles.
-  // Stats failure shows non-intrusive error; game state display is never broken.
+  // Keep latestTickRef current so the interval always fetches the most recent position.
+  useEffect(() => {
+    latestTickRef.current = currentTick
+  }, [currentTick])
+
+  // Reset all stats state when the game changes.
+  useEffect(() => {
+    abortRef.current?.abort()
+    lastFetchedTickRef.current = -1
+    firstLoadDoneRef.current = false
+    setStatsData(null)
+    setStatsError(false)
+    setStatsLoading(false)
+  }, [gameId])
+
+  // Interval-based stats fetch: polls every 100ms and fetches only when the tick
+  // has moved since the last fetch. AbortController cancels any in-flight request
+  // before starting the next, so stale responses never overwrite fresh ones.
+  // Skeleton shows only for the initial load; subsequent updates swap data in place.
   useEffect(() => {
     if (MOCK_MODE) return
 
-    if (debounceRef.current) clearTimeout(debounceRef.current)
-    debounceRef.current = setTimeout(async () => {
-      setStatsLoading(true)
+    const doFetch = async (tick: number) => {
+      if (tick === lastFetchedTickRef.current) return
+      abortRef.current?.abort()
+      abortRef.current = new AbortController()
+      const { signal } = abortRef.current
+      lastFetchedTickRef.current = tick
+      if (!firstLoadDoneRef.current) setStatsLoading(true)
       setStatsError(false)
       try {
-        const stats = await fetchGameStats(gameId, currentTick)
-        setStatsData(stats)
-      } catch {
-        setStatsData(null)
-        setStatsError(true)
-      } finally {
-        setStatsLoading(false)
+        const stats = await fetchGameStats(gameId, tick, signal)
+        if (!signal.aborted) {
+          firstLoadDoneRef.current = true
+          setStatsData(stats)
+          setStatsLoading(false)
+        }
+      } catch (err) {
+        if (!signal.aborted && (err as Error).name !== 'AbortError') {
+          lastFetchedTickRef.current = -1
+          setStatsData(null)
+          setStatsError(true)
+          setStatsLoading(false)
+        }
       }
-    }, STATS_DEBOUNCE_MS)
-
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current)
     }
-  }, [gameId, currentTick])
 
-  // Reset stats when game changes
-  useEffect(() => {
-    setStatsData(null)
-    setStatsError(false)
+    doFetch(latestTickRef.current)
+    const id = setInterval(() => doFetch(latestTickRef.current), STATS_INTERVAL_MS)
+    return () => {
+      clearInterval(id)
+      abortRef.current?.abort()
+    }
   }, [gameId])
 
   function handleTickChange(tick: number, play: PlaySnapshot | null) {
@@ -128,29 +156,27 @@ export function GameView({ gameId, onBack }: GameViewProps) {
             <PlayDescription play={currentPlay} />
           </div>
 
-          {/* Team stats */}
+          {/* Stats panels — skeleton only on initial load; subsequent updates swap in place */}
           {statsLoading ? (
             <StatsSkeleton />
           ) : statsData ? (
-            <TeamStatsPanel
-              homeTeam={statsData.home_team}
-              awayTeam={statsData.away_team}
-              homeStats={statsData.team.home}
-              awayStats={statsData.team.away}
-            />
+            <>
+              <TeamStatsPanel
+                homeTeam={statsData.home_team}
+                awayTeam={statsData.away_team}
+                homeStats={statsData.team.home}
+                awayStats={statsData.team.away}
+              />
+              <PlayerStatsPanel
+                homeTeam={statsData.home_team}
+                awayTeam={statsData.away_team}
+                homePlayers={statsData.players.home}
+                awayPlayers={statsData.players.away}
+              />
+            </>
           ) : statsError ? (
             <div className="text-xs text-gray-600 text-center py-2">Stats unavailable</div>
           ) : null}
-
-          {/* Player stats */}
-          {!statsLoading && statsData && (
-            <PlayerStatsPanel
-              homeTeam={statsData.home_team}
-              awayTeam={statsData.away_team}
-              homePlayers={statsData.players.home}
-              awayPlayers={statsData.players.away}
-            />
-          )}
         </ErrorBoundary>
       </main>
     </div>
