@@ -31,32 +31,40 @@ export interface QBStats {
   attempts: number
   pass_tds: number
   interceptions: number
+  passer_rating: number | null
+  sacks_taken: number
+  rush_yards: number
+  rush_attempts: number
 }
 
 export interface RBStats {
   player_id: string
   name: string
-  rush_yards: number
   carries: number
+  rush_yards: number
   rush_tds: number
-  fumbles_lost: number
+  receptions: number
+  rec_yards: number
+  rec_tds: number
 }
 
 export interface WRTEStats {
   player_id: string
   name: string
-  receiving_yards: number
-  receptions: number
   targets: number
+  receptions: number
+  rec_yards: number
+  rec_tds: number
 }
 
 export interface KStats {
   player_id: string
   name: string
   fg_made: number
-  fg_attempted: number
+  fg_att: number
+  fg_long: number
   xp_made: number
-  xp_attempted: number
+  xp_att: number
 }
 
 export interface PlayerGroup {
