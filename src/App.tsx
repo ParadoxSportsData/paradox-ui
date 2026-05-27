@@ -1,13 +1,17 @@
 // src/App.tsx
-// PDX-28: Top-level app shell. Routes between GameSelector list view and GameView.
-// No router library — single selectedGameId state drives the two-screen flow.
-// PDX-55: blindMode applies to game selection only — masks final scores on cards
-// so the user can choose a game without knowing the result. Inside GameView,
-// scores are always visible (you're watching the game unfold from 0).
+// PDX-28: Top-level app shell. Routes between GameSelector, GameView, and Lab.
+// PDX-55: blindMode applies to game selection only — masks final scores on cards.
+// PDX-66: View discriminated union replaces selectedGameId binary state.
 
 import { useState } from 'react'
 import { GameSelector } from './components/GameSelector'
 import { GameView } from './components/GameView'
+import { Lab } from './components/Lab'
+
+type View =
+  | { mode: 'selector' }
+  | { mode: 'game'; gameId: string }
+  | { mode: 'lab' }
 
 function BlindModeButton({ blindMode, onToggle }: { blindMode: boolean; onToggle: () => void }) {
   return (
@@ -25,7 +29,7 @@ function BlindModeButton({ blindMode, onToggle }: { blindMode: boolean; onToggle
 }
 
 function App() {
-  const [selectedGameId, setSelectedGameId] = useState<string | null>(null)
+  const [view, setView] = useState<View>({ mode: 'selector' })
   const [blindMode, setBlindMode] = useState(
     () => localStorage.getItem('blindMode') === 'true'
   )
@@ -38,13 +42,17 @@ function App() {
     })
   }
 
-  if (selectedGameId) {
+  if (view.mode === 'game') {
     return (
       <GameView
-        gameId={selectedGameId}
-        onBack={() => setSelectedGameId(null)}
+        gameId={view.gameId}
+        onBack={() => setView({ mode: 'selector' })}
       />
     )
+  }
+
+  if (view.mode === 'lab') {
+    return <Lab onBack={() => setView({ mode: 'selector' })} />
   }
 
   return (
@@ -53,9 +61,20 @@ function App() {
         <h1 className="text-2xl font-bold tracking-tight">
           clock-gate <span className="text-blue-400 font-mono text-lg">UI</span>
         </h1>
-        <BlindModeButton blindMode={blindMode} onToggle={toggleBlindMode} />
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setView({ mode: 'lab' })}
+            className="text-xs font-mono px-3 py-1.5 rounded transition bg-purple-700 text-gray-100 hover:bg-purple-600"
+          >
+            The Lab
+          </button>
+          <BlindModeButton blindMode={blindMode} onToggle={toggleBlindMode} />
+        </div>
       </header>
-      <GameSelector onSelect={setSelectedGameId} blindMode={blindMode} />
+      <GameSelector
+        onSelect={(gameId) => setView({ mode: 'game', gameId })}
+        blindMode={blindMode}
+      />
     </div>
   )
 }
