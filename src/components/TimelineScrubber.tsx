@@ -117,6 +117,8 @@ export function TimelineScrubber({ gameId, value, onTickChange }: TimelineScrubb
   const [tick, setTick] = useState(0)
   // PDX-50
   const [activeFilter, setActiveFilter] = useState<FilterKey>('all')
+  // PDX-72: hover state for clickable dot tooltips
+  const [hoveredTick, setHoveredTick] = useState<number | null>(null)
   // PDX-53: controlled input value mirrors tick as MM:SS; user can freely edit it
   const [timeInputValue, setTimeInputValue] = useState('0:00')
 
@@ -333,20 +335,49 @@ export function TimelineScrubber({ gameId, value, onTickChange }: TimelineScrubb
           onChange={handleSliderChange}
           className="w-full h-3 bg-gray-800 rounded-full appearance-none cursor-pointer accent-blue-500"
         />
-        {/* PDX-56: Play tick dots — update when filter changes so the visual effect is immediate */}
-        {filteredTicks.map((t) => (
-          <div
-            key={t}
-            className={[
-              'absolute top-0 w-px h-2 pointer-events-none',
-              activeFilter === 'scoring' ? 'bg-amber-400 opacity-90'
-              : activeFilter === 'run'   ? 'bg-green-400 opacity-70'
-              : activeFilter === 'pass'  ? 'bg-sky-400 opacity-70'
-              : 'bg-gray-400 opacity-25',
-            ].join(' ')}
-            style={{ left: `${(t / maxTick) * 100}%` }}
-          />
-        ))}
+        {/* PDX-56/72: Play tick dots — clickable hit zone (8px wide) with hover expand and tooltip */}
+        {filteredPlays.map((play) => {
+          const t = play.tick
+          const isHovered = hoveredTick === t
+          const dotColorClass = activeFilter === 'scoring'
+            ? 'bg-amber-400'
+            : activeFilter === 'run'
+            ? 'bg-green-400'
+            : activeFilter === 'pass'
+            ? 'bg-sky-400'
+            : 'bg-gray-400'
+          const dotOpacityClass = isHovered
+            ? 'opacity-100'
+            : activeFilter === 'all'
+            ? 'opacity-30'
+            : 'opacity-70'
+          return (
+            <div
+              key={t}
+              className="absolute top-0 h-2 w-2 cursor-pointer z-10"
+              style={{ left: `${(t / maxTick) * 100}%`, transform: 'translateX(-50%)' }}
+              onClick={() => applyTick(t, play)}
+              onMouseEnter={() => setHoveredTick(t)}
+              onMouseLeave={() => setHoveredTick(null)}
+            >
+              {/* Visible dot — pointer-events-none, expands on hover */}
+              <div
+                className={[
+                  'pointer-events-none absolute top-0 h-full left-1/2 -translate-x-1/2 transition-all duration-100',
+                  dotColorClass,
+                  dotOpacityClass,
+                  isHovered ? 'w-[3px]' : 'w-px',
+                ].join(' ')}
+              />
+              {/* Tooltip above dot */}
+              {isHovered && (
+                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-gray-900 border border-gray-700 rounded px-1.5 py-0.5 text-xs text-gray-200 whitespace-nowrap z-20 pointer-events-none shadow-lg">
+                  {tickToMMSS(t)} · {play.play_type}
+                </div>
+              )}
+            </div>
+          )
+        })}
         {/* Quarter marker lines */}
         {QUARTER_TICKS.filter((qt) => qt <= maxTick).map((qt, i) => {
           const pct = (qt / maxTick) * 100
