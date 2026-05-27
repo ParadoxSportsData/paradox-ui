@@ -1,6 +1,7 @@
 // src/components/ScorePanel.tsx
 // PDX-25: Pure display — score and possession indicator.
 // No hooks, no fetches. All null-safe.
+// PDX-55: blindMode replaces score digits with ? to prevent result spoilers.
 
 import type { PlaySnapshot } from '../api/schemas'
 
@@ -8,9 +9,10 @@ interface ScorePanelProps {
   homeTeam: string
   awayTeam: string
   play: PlaySnapshot | null
+  blindMode: boolean
 }
 
-export function ScorePanel({ homeTeam, awayTeam, play }: ScorePanelProps) {
+export function ScorePanel({ homeTeam, awayTeam, play, blindMode }: ScorePanelProps) {
   const homeScore = play?.home_score ?? 0
   const awayScore = play?.away_score ?? 0
   const posteam = play?.posteam ?? null
@@ -28,9 +30,13 @@ export function ScorePanel({ homeTeam, awayTeam, play }: ScorePanelProps) {
           )}
           <span className="text-sm text-gray-400 font-mono">{awayTeam}</span>
         </div>
-        <span className={`text-3xl font-bold ${awayLeads ? 'text-white' : 'text-gray-400'}`}>
-          {awayScore}
-        </span>
+        {blindMode ? (
+          <span className="text-3xl font-bold text-gray-600">?</span>
+        ) : (
+          <span className={`text-3xl font-bold ${awayLeads ? 'text-white' : 'text-gray-400'}`}>
+            {awayScore}
+          </span>
+        )}
       </div>
 
       <div className="text-gray-600 text-lg font-light">–</div>
@@ -43,9 +49,13 @@ export function ScorePanel({ homeTeam, awayTeam, play }: ScorePanelProps) {
             <span className="text-yellow-400 text-xs">◀</span>
           )}
         </div>
-        <span className={`text-3xl font-bold ${homeLeads ? 'text-white' : 'text-gray-400'}`}>
-          {homeScore}
-        </span>
+        {blindMode ? (
+          <span className="text-3xl font-bold text-gray-600">?</span>
+        ) : (
+          <span className={`text-3xl font-bold ${homeLeads ? 'text-white' : 'text-gray-400'}`}>
+            {homeScore}
+          </span>
+        )}
       </div>
     </div>
   )

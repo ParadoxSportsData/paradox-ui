@@ -1,6 +1,8 @@
 // src/components/GameSelector.tsx
 // PDX-23: Lists games from /games (or MOCK). Renders a card grid.
 // useQuery only — no useEffect fetch.
+// PDX-54: OT badge on cards when duration > 3600.
+// PDX-55: blindMode masks final scores until user reveals them.
 
 import { useQuery } from '@tanstack/react-query'
 import { listGames } from '../api/client'
@@ -8,6 +10,7 @@ import type { GameSummary } from '../api/schemas'
 
 interface GameSelectorProps {
   onSelect: (gameId: string) => void
+  blindMode: boolean
 }
 
 function formatDuration(seconds: number): string {
@@ -16,17 +19,38 @@ function formatDuration(seconds: number): string {
   return `${m}:${String(s).padStart(2, '0')}`
 }
 
-function GameCard({ game, onSelect }: { game: GameSummary; onSelect: (id: string) => void }) {
+function GameCard({
+  game,
+  onSelect,
+  blindMode,
+}: {
+  game: GameSummary
+  onSelect: (id: string) => void
+  blindMode: boolean
+}) {
+  const isOT = game.duration > 3600
+
   return (
     <button
       onClick={() => onSelect(game.game_id)}
       className="text-left bg-gray-800 rounded-lg p-4 cursor-pointer hover:ring-2 hover:ring-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-none transition"
     >
-      <div className="text-lg font-bold text-white">
-        {game.away_team} @ {game.home_team}
+      <div className="flex items-center justify-between gap-2">
+        <div className="text-lg font-bold text-white">
+          {game.away_team} @ {game.home_team}
+        </div>
+        {isOT && (
+          <span className="shrink-0 text-xs font-mono bg-gray-700 text-gray-400 px-1.5 py-0.5 rounded">
+            OT
+          </span>
+        )}
       </div>
-      <div className="text-2xl font-mono text-blue-300 mt-1">
-        {game.home_score} – {game.away_score}
+      <div className="text-2xl font-mono mt-1">
+        {blindMode ? (
+          <span className="text-gray-600">? – ?</span>
+        ) : (
+          <span className="text-blue-300">{game.home_score} – {game.away_score}</span>
+        )}
       </div>
       <div className="text-sm text-gray-400 mt-2">
         {game.game_id.replace(/_/g, ' ')}
@@ -49,7 +73,7 @@ function SkeletonCard() {
   )
 }
 
-export function GameSelector({ onSelect }: GameSelectorProps) {
+export function GameSelector({ onSelect, blindMode }: GameSelectorProps) {
   const query = useQuery({ queryKey: ['games'], queryFn: listGames })
 
   if (query.isLoading) {
@@ -83,7 +107,7 @@ export function GameSelector({ onSelect }: GameSelectorProps) {
       <h2 className="text-xl font-semibold text-gray-200 mb-4">Select a Game</h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {query.data.map((game) => (
-          <GameCard key={game.game_id} game={game} onSelect={onSelect} />
+          <GameCard key={game.game_id} game={game} onSelect={onSelect} blindMode={blindMode} />
         ))}
       </div>
     </div>
