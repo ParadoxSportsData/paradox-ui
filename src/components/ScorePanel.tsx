@@ -15,9 +15,6 @@ export function ScorePanel({ homeTeam, awayTeam, play }: ScorePanelProps) {
   const awayScore = play?.away_score ?? 0
   const posteam = play?.posteam ?? null
 
-  const homeLeads = homeScore > awayScore
-  const awayLeads = awayScore > homeScore
-
   return (
     <div className="bg-gray-800 rounded-lg p-4 flex items-center justify-between gap-4 border border-gray-700/60">
       {/* Away team */}
@@ -28,7 +25,7 @@ export function ScorePanel({ homeTeam, awayTeam, play }: ScorePanelProps) {
           )}
           <span className="text-xs font-mono font-bold uppercase tracking-widest text-gray-500">{awayTeam}</span>
         </div>
-        <span className={`text-4xl font-black tabular-nums ${awayLeads ? 'text-white' : 'text-gray-500'}`}>
+        <span className="text-4xl font-black tabular-nums text-white">
           {awayScore}
         </span>
       </div>
@@ -43,7 +40,7 @@ export function ScorePanel({ homeTeam, awayTeam, play }: ScorePanelProps) {
             <span className="text-yellow-400 text-sm">◀</span>
           )}
         </div>
-        <span className={`text-4xl font-black tabular-nums ${homeLeads ? 'text-white' : 'text-gray-500'}`}>
+        <span className="text-4xl font-black tabular-nums text-white">
           {homeScore}
         </span>
       </div>

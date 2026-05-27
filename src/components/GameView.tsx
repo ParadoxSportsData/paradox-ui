@@ -191,7 +191,6 @@ export function GameView({ gameId, onBack, onGoToLab }: GameViewProps) {
             />
           </h1>
         </div>
-        <span className="ml-auto text-xs text-gray-600 font-mono">{gameId}</span>
       </header>
 
       <main className="flex flex-col gap-4 p-4 flex-1">

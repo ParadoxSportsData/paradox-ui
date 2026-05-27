@@ -49,13 +49,39 @@ function weekToLabel(week: number, canonicalAbbr: string): WeekLabel {
   return { kind: 'sb' }
 }
 
-// buildTeamSchedule constructs an ordered list of schedule entries for one team.
-// Regular season weeks are filled 1–N with BYE rows for any missing week.
-// Playoff games appear after week 17 in ascending week order.
-export function buildTeamSchedule(games: GameSummary[], teamAbbr: string): ScheduleEntry[] {
+// getSeasonFromGame extracts the season year from a game, preferring the
+// explicit season field and falling back to parsing the game_id prefix.
+export function getSeasonFromGame(g: GameSummary): number | null {
+  if (g.season != null) return g.season
+  const n = parseInt(g.game_id.substring(0, 4), 10)
+  return isNaN(n) ? null : n
+}
+
+// getSeasonsForTeam returns a sorted list of unique seasons in which the
+// given team (or any of its historical aliases) appears.
+export function getSeasonsForTeam(games: GameSummary[], teamAbbr: string): number[] {
+  const canonical = getCanonicalAbbr(teamAbbr) ?? teamAbbr
+  const seasons = new Set<number>()
+  for (const g of games) {
+    const h = getCanonicalAbbr(g.home_team) ?? g.home_team
+    const a = getCanonicalAbbr(g.away_team) ?? g.away_team
+    if (h === canonical || a === canonical) {
+      const s = getSeasonFromGame(g)
+      if (s != null) seasons.add(s)
+    }
+  }
+  return [...seasons].sort((a, b) => a - b)
+}
+
+// buildTeamSchedule constructs an ordered list of schedule entries for one team
+// in a specific season. Regular season weeks are filled 1–N with BYE rows for
+// any missing week. Playoff games appear after week 17 in ascending week order.
+export function buildTeamSchedule(games: GameSummary[], teamAbbr: string, season: number): ScheduleEntry[] {
   const canonical = getCanonicalAbbr(teamAbbr) ?? teamAbbr
 
-  const teamGames = games.filter(g => {
+  const seasonGames = games.filter(g => getSeasonFromGame(g) === season)
+
+  const teamGames = seasonGames.filter(g => {
     const h = getCanonicalAbbr(g.home_team) ?? g.home_team
     const a = getCanonicalAbbr(g.away_team) ?? g.away_team
     return h === canonical || a === canonical
