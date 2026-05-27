@@ -218,27 +218,30 @@ export function GameView({ gameId, onBack, onGoToLab }: GameViewProps) {
             <PlayDescription play={currentPlay} />
           </div>
 
-          {/* Stats panels — skeleton only on initial load; subsequent updates swap in place */}
-          {statsLoading ? (
-            <StatsSkeleton />
-          ) : statsData ? (
-            <>
-              <TeamStatsPanel
-                homeTeam={statsData.home_team}
-                awayTeam={statsData.away_team}
-                homeStats={statsData.team.home}
-                awayStats={statsData.team.away}
-              />
-              <PlayerStatsPanel
-                homeTeam={statsData.home_team}
-                awayTeam={statsData.away_team}
-                homePlayers={statsData.players.home}
-                awayPlayers={statsData.players.away}
-              />
-            </>
-          ) : statsError ? (
-            <div className="text-xs text-gray-400 text-center bg-gray-800 rounded-lg p-4 min-h-[160px] flex items-center justify-center">Stats unavailable</div>
-          ) : null}
+          {/* Stats panels — only render once a play has occurred (currentPlay !== null).
+              Before the first play, currentPlay is null and stats are meaningless. */}
+          {currentPlay !== null && currentTick > 0 && (
+            statsLoading ? (
+              <StatsSkeleton />
+            ) : statsData ? (
+              <>
+                <TeamStatsPanel
+                  homeTeam={statsData.home_team}
+                  awayTeam={statsData.away_team}
+                  homeStats={statsData.team.home}
+                  awayStats={statsData.team.away}
+                />
+                <PlayerStatsPanel
+                  homeTeam={statsData.home_team}
+                  awayTeam={statsData.away_team}
+                  homePlayers={statsData.players.home}
+                  awayPlayers={statsData.players.away}
+                />
+              </>
+            ) : statsError ? (
+              <div className="text-xs text-gray-400 text-center bg-gray-800 rounded-lg p-4 min-h-[160px] flex items-center justify-center">Stats unavailable</div>
+            ) : null
+          )}
         </ErrorBoundary>
       </main>
     </div>

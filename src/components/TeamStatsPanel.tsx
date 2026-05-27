@@ -4,6 +4,7 @@
 // Pure display: no API calls, no hooks. Caller handles loading/null state.
 
 import type { TeamStats } from '../api/stats'
+import { getTeamColor } from '../lib/nflTeams'
 
 interface TeamStatsPanelProps {
   homeTeam: string
@@ -65,9 +66,9 @@ export function TeamStatsPanel({ homeTeam, awayTeam, homeStats, awayStats }: Tea
     <div className="bg-gray-800 rounded-lg p-4 border border-gray-700/60">
       {/* Header: away LEFT, home RIGHT — broadcast convention */}
       <div className="grid grid-cols-3 font-mono mb-2 pb-2 border-b border-gray-700">
-        <span className="text-right text-sm font-semibold text-red-400">{awayTeam}</span>
+        <span className="text-right text-sm font-semibold" style={{ color: getTeamColor(awayTeam) }}>{awayTeam}</span>
         <span className="text-center text-xs text-gray-500 self-end">STAT</span>
-        <span className="text-left text-sm font-semibold text-blue-400">{homeTeam}</span>
+        <span className="text-left text-sm font-semibold" style={{ color: getTeamColor(homeTeam) }}>{homeTeam}</span>
       </div>
 
       {/* Stat rows: away LEFT, label CENTER, home RIGHT */}

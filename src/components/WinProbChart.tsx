@@ -21,6 +21,7 @@ import {
   Tooltip,
 } from 'recharts'
 import { getTimeline } from '../api/client'
+import { getTeamColor } from '../lib/nflTeams'
 
 interface WinProbChartProps {
   gameId: string
@@ -65,17 +66,19 @@ interface WpTooltipProps {
   payload?: Array<{ payload: ChartPoint }>
   homeTeam: string
   awayTeam: string
+  homeColor: string
+  awayColor: string
 }
 
-function WpTooltip({ active, payload, homeTeam, awayTeam }: WpTooltipProps) {
+function WpTooltip({ active, payload, homeTeam, awayTeam, homeColor, awayColor }: WpTooltipProps) {
   if (!active || !payload?.length) return null
   const pt = payload.find(p => p.payload?.wp !== undefined)?.payload
   if (!pt) return null
   return (
     <div style={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: 6, padding: '8px 10px' }}>
       <div style={{ color: '#d1d5db', fontSize: 11 }}>{tickToQtrClock(pt.tick)}</div>
-      <div style={{ color: '#f87171', fontSize: 12 }}>{awayTeam} Win {((1 - pt.wp) * 100).toFixed(1)}%</div>
-      <div style={{ color: '#93c5fd', fontSize: 12 }}>{homeTeam} Win {(pt.wp * 100).toFixed(1)}%</div>
+      <div style={{ color: awayColor, fontSize: 12 }}>{awayTeam} Win {((1 - pt.wp) * 100).toFixed(1)}%</div>
+      <div style={{ color: homeColor, fontSize: 12 }}>{homeTeam} Win {(pt.wp * 100).toFixed(1)}%</div>
       <div style={{ color: '#9ca3af', fontSize: 11 }}>{homeTeam} {pt.homeScore} – {awayTeam} {pt.awayScore}</div>
     </div>
   )
@@ -136,6 +139,8 @@ export function WinProbChart({ gameId, homeTeam, awayTeam, currentTick, onTickCh
     })
 
   const maxTick = query.data.max_tick
+  const homeColor = getTeamColor(homeTeam)
+  const awayColor = getTeamColor(awayTeam)
 
   const xPct = maxTick > 0 ? currentTick / maxTick : 0
   const cursorLeft = `calc(${YAXIS_WIDTH}px + ${(xPct * 100).toFixed(4)}% - ${(xPct * PLOT_OFFSET).toFixed(4)}px)`
@@ -158,8 +163,8 @@ export function WinProbChart({ gameId, homeTeam, awayTeam, currentTick, onTickCh
     <div className="border-t border-gray-800 p-4">
       {/* Away on left, home on right — broadcast convention */}
       <div className="flex justify-between items-baseline text-xs mb-2">
-        <span className="text-red-400 font-mono font-semibold">{awayTeam} {awayWpLabel ?? 'Win %'}</span>
-        <span className="text-blue-400 font-mono font-semibold">{homeTeam} {homeWpLabel ?? 'Win %'}</span>
+        <span className="font-mono font-semibold" style={{ color: awayColor }}>{awayTeam} {awayWpLabel ?? 'Win %'}</span>
+        <span className="font-mono font-semibold" style={{ color: homeColor }}>{homeTeam} {homeWpLabel ?? 'Win %'}</span>
       </div>
 
       <div
@@ -195,42 +200,44 @@ export function WinProbChart({ gameId, homeTeam, awayTeam, currentTick, onTickCh
               axisLine={false}
               width={YAXIS_WIDTH}
             />
-            <Tooltip content={<WpTooltip homeTeam={homeTeam} awayTeam={awayTeam} />} />
+            <Tooltip content={<WpTooltip homeTeam={homeTeam} awayTeam={awayTeam} homeColor={homeColor} awayColor={awayColor} />} />
             {/* 50% midline */}
             <ReferenceLine y={0} stroke="#6b7280" strokeDasharray="3 3" />
             {/* Quarter boundary lines */}
             {QUARTER_TICKS.filter(qt => qt <= maxTick).map((qt) => (
               <ReferenceLine key={qt} x={qt} stroke="#374151" strokeDasharray="4 2" />
             ))}
-            {/* Home fill: below midline (home winning), blue */}
+            {/* Home fill: below midline (home winning) */}
             <Area
               dataKey="homeY"
-              fill="rgba(59,130,246,0.18)"
+              fill={homeColor}
+              fillOpacity={0.18}
               stroke="none"
               baseValue={0}
               isAnimationActive={false}
             />
-            {/* Away fill: above midline (away winning), red */}
+            {/* Away fill: above midline (away winning) */}
             <Area
               dataKey="awayY"
-              fill="rgba(239,68,68,0.18)"
+              fill={awayColor}
+              fillOpacity={0.18}
               stroke="none"
               baseValue={0}
               isAnimationActive={false}
             />
-            {/* Solid blue line — home winning segments (chartY ≤ 0) */}
+            {/* Solid line — home winning segments (chartY ≤ 0) */}
             <Line
               dataKey="solidY"
-              stroke="#3b82f6"
+              stroke={homeColor}
               strokeWidth={2}
               dot={false}
               isAnimationActive={false}
               connectNulls={false}
             />
-            {/* Dotted red line — away winning segments (chartY ≥ 0) */}
+            {/* Dotted line — away winning segments (chartY ≥ 0) */}
             <Line
               dataKey="dottedY"
-              stroke="#ef4444"
+              stroke={awayColor}
               strokeWidth={2}
               strokeDasharray="5 3"
               dot={false}
@@ -251,14 +258,14 @@ export function WinProbChart({ gameId, homeTeam, awayTeam, currentTick, onTickCh
           />
           {awayWpLabel && (
             <div className={`absolute top-[6px] flex items-center ${badgeOnLeft ? 'right-2' : 'left-2'}`}>
-              <span className="bg-red-600 text-white text-xs font-semibold rounded-full px-2 py-0.5 leading-none shadow-md tabular-nums">
+              <span className="text-white text-xs font-semibold rounded-full px-2 py-0.5 leading-none shadow-md tabular-nums" style={{ backgroundColor: awayColor }}>
                 {awayWpLabel}
               </span>
             </div>
           )}
           {homeWpLabel && (
             <div className={`absolute bottom-[6px] flex items-center ${badgeOnLeft ? 'right-2' : 'left-2'}`}>
-              <span className="bg-blue-600 text-white text-xs font-semibold rounded-full px-2 py-0.5 leading-none shadow-md tabular-nums">
+              <span className="text-white text-xs font-semibold rounded-full px-2 py-0.5 leading-none shadow-md tabular-nums" style={{ backgroundColor: homeColor }}>
                 {homeWpLabel}
               </span>
             </div>
