@@ -15,7 +15,7 @@ interface TimelineScrubberProps {
   onTickChange: (tick: number, play: PlaySnapshot | null) => void
 }
 
-// O(log N) binary search: largest play.tick <= targetTick
+// O(log N) binary search: largest play.tick <= targetTick (floor)
 function findNearestPlay(plays: PlaySnapshot[], targetTick: number): PlaySnapshot | null {
   if (plays.length === 0) return null
   let lo = 0
@@ -31,6 +31,25 @@ function findNearestPlay(plays: PlaySnapshot[], targetTick: number): PlaySnapsho
     }
   }
   return result
+}
+
+// Closest play by absolute distance — used for slider snapping so a click
+// slightly before a dot's tick (due to range input thumb offset) still snaps
+// to the correct dot rather than the previous one.
+function findClosestPlay(plays: PlaySnapshot[], targetTick: number): PlaySnapshot | null {
+  if (plays.length === 0) return null
+  const floor = findNearestPlay(plays, targetTick)
+  // Find the ceiling: first play with tick > targetTick
+  let ceiling: PlaySnapshot | null = null
+  if (floor) {
+    const idx = plays.indexOf(floor)
+    if (idx + 1 < plays.length) ceiling = plays[idx + 1]
+  } else {
+    ceiling = plays[0]
+  }
+  if (!floor) return ceiling
+  if (!ceiling) return floor
+  return Math.abs(ceiling.tick - targetTick) < Math.abs(floor.tick - targetTick) ? ceiling : floor
 }
 
 function tickToMMSS(tick: number): string {
@@ -147,10 +166,11 @@ export function TimelineScrubber({ gameId, onTickChange }: TimelineScrubberProps
 
   function handleSliderChange(e: React.ChangeEvent<HTMLInputElement>) {
     const newTick = Number(e.target.value)
-    // When a filter is active, snap to the nearest filtered play so the description
-    // always matches the filter — otherwise dragging between dots shows the wrong play type.
+    // When a filter is active, snap to the closest filtered play so the description
+    // always matches the filter. Use closest (not floor) so a click slightly before
+    // a dot's tick — due to range input thumb offset — still lands on the right dot.
     if (activeFilter !== 'all' && filteredPlays.length > 0) {
-      const target = findNearestPlay(filteredPlays, newTick)
+      const target = findClosestPlay(filteredPlays, newTick)
       if (target) { applyTick(target.tick, target); return }
     }
     const play = query.data ? findNearestPlay(query.data.plays, newTick) : null
