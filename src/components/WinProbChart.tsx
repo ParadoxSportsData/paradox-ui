@@ -1,16 +1,20 @@
 // src/components/WinProbChart.tsx
-// PDX-26: Recharts LineChart of win probability over game timeline.
-// PDX-51: Area fill with green/red linearGradient (green above 50%, red below).
-// PDX-52: Custom tooltip showing elapsed time, home Win%, and score.
-// Shares ['timeline', gameId] query key with TimelineScrubber — zero extra fetches.
-// Filters out plays with null win_prob to avoid line discontinuities.
-// Cursor is a CSS overlay (not a Recharts ReferenceLine) so it moves without SVG re-render.
+// PDX-26: Win probability chart over game timeline.
+// PDX-51: Area fill.
+// PDX-52: Custom tooltip showing time, win %, and score.
+// PDX-71: Broadcast-style split chart. Home fills bottom (blue), away fills top (red).
+//          Solid blue line when home winning, dotted red line when away winning.
+//          Y-axis symmetric [-1,1]: away 100% top, 50% center, home 100% bottom.
+//          Home label right, away label left. YAXIS_WIDTH=40 and RIGHT_MARGIN=16 unchanged.
+// PDX-74: X-axis shows clean quarter-boundary labels (KO/Q2/Q3/Q4/Final) not dense elapsed ticks.
+//          Tooltip shows quarter + clock remaining matching game state bar convention.
 
 import { useQuery } from '@tanstack/react-query'
 import {
   ResponsiveContainer,
-  AreaChart,
+  ComposedChart,
   Area,
+  Line,
   XAxis,
   YAxis,
   ReferenceLine,
@@ -26,43 +30,59 @@ interface WinProbChartProps {
   onTickChange?: (tick: number) => void
 }
 
-function tickToMMSS(tick: number): string {
-  const m = Math.floor(tick / 60)
-  const s = tick % 60
-  return `${m}:${String(s).padStart(2, '0')}`
+// Quarter + clock-remaining format matching game state bar convention.
+function tickToQtrClock(tick: number): string {
+  const quarter = Math.min(Math.ceil((tick + 1) / 900), 5)
+  const remaining = quarter * 900 - tick
+  const m = Math.floor(remaining / 60)
+  const s = remaining % 60
+  const label = quarter === 5 ? 'OT' : `Q${quarter}`
+  return `${label} ${m}:${String(s).padStart(2, '0')}`
 }
 
 const QUARTER_TICKS = [900, 1800, 2700, 3600]
-const QUARTER_LABELS = ['Q1', 'Q2', 'Q3', 'Q4']
 
-// Must match the Recharts config below so the CSS overlay lands on the plot area.
-const YAXIS_WIDTH = 40      // <YAxis width={40} />
-const RIGHT_MARGIN = 16     // <LineChart margin={{ right: 16 }} />
-const PLOT_OFFSET = YAXIS_WIDTH + RIGHT_MARGIN  // total horizontal overhead
+// Must match Recharts config — CSS cursor overlay depends on these exact values.
+const YAXIS_WIDTH = 40
+const RIGHT_MARGIN = 16
+const PLOT_OFFSET = YAXIS_WIDTH + RIGHT_MARGIN
 
-// PDX-52: Custom tooltip component showing elapsed time, home Win%, and score.
+interface ChartPoint {
+  tick: number
+  wp: number
+  // chartY = 1 - 2*wp: maps wp=1(home dominates)→-1(bottom), wp=0.5→0(center), wp=0(away dominates)→+1(top)
+  chartY: number
+  homeY: number        // Math.min(chartY, 0) — home fill area, below center
+  awayY: number        // Math.max(chartY, 0) — away fill area, above center
+  solidY: number | null   // chartY when ≤0 (home winning) → solid blue line segment
+  dottedY: number | null  // chartY when ≥0 (away winning) → dotted red line segment
+  homeScore: number
+  awayScore: number
+}
+
 interface WpTooltipProps {
   active?: boolean
-  payload?: Array<{ payload: { tick: number; wp: number; homeScore: number; awayScore: number } }>
-  label?: number
+  payload?: Array<{ payload: ChartPoint }>
   homeTeam: string
   awayTeam: string
 }
 
-function WpTooltip({ active, payload, label, homeTeam, awayTeam }: WpTooltipProps) {
+function WpTooltip({ active, payload, homeTeam, awayTeam }: WpTooltipProps) {
   if (!active || !payload?.length) return null
-  const { wp, homeScore, awayScore } = payload[0].payload
+  const pt = payload.find(p => p.payload?.wp !== undefined)?.payload
+  if (!pt) return null
   return (
     <div style={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: 6, padding: '8px 10px' }}>
-      <div style={{ color: '#d1d5db', fontSize: 11 }}>{tickToMMSS(label ?? 0)}</div>
-      <div style={{ color: '#93c5fd', fontSize: 12 }}>{homeTeam} Win {(wp * 100).toFixed(1)}%</div>
-      <div style={{ color: '#9ca3af', fontSize: 11 }}>{homeTeam} {homeScore} – {awayTeam} {awayScore}</div>
+      <div style={{ color: '#d1d5db', fontSize: 11 }}>{tickToQtrClock(pt.tick)}</div>
+      <div style={{ color: '#f87171', fontSize: 12 }}>{awayTeam} Win {((1 - pt.wp) * 100).toFixed(1)}%</div>
+      <div style={{ color: '#93c5fd', fontSize: 12 }}>{homeTeam} Win {(pt.wp * 100).toFixed(1)}%</div>
+      <div style={{ color: '#9ca3af', fontSize: 11 }}>{homeTeam} {pt.homeScore} – {awayTeam} {pt.awayScore}</div>
     </div>
   )
 }
 
-// Binary search: nearest wp value at or before targetTick.
-function findNearestWp(data: { tick: number; wp: number }[], targetTick: number): number | null {
+// Binary search: nearest wp at or before targetTick.
+function findNearestWp(data: ChartPoint[], targetTick: number): number | null {
   if (data.length === 0) return null
   let lo = 0, hi = data.length - 1, result = data[0]
   while (lo <= hi) {
@@ -88,26 +108,41 @@ export function WinProbChart({ gameId, homeTeam, awayTeam, currentTick, onTickCh
   }
 
   if (query.isError || !query.data) {
-    return null
+    return (
+      <div className="border-t border-gray-800 p-4">
+        <div className="h-48 flex items-center justify-center text-gray-500 text-xs">
+          Win probability unavailable
+        </div>
+      </div>
+    )
   }
 
-  // PDX-52: include homeScore and awayScore per tick for tooltip display.
-  const data = query.data.plays
-    .filter((p) => p.win_prob !== null)
-    .map((p) => ({ tick: p.tick, wp: p.win_prob as number, homeScore: p.home_score, awayScore: p.away_score }))
+  const data: ChartPoint[] = query.data.plays
+    .filter(p => p.win_prob !== null)
+    .map(p => {
+      const wp = p.win_prob as number
+      const chartY = 1 - 2 * wp
+      return {
+        tick: p.tick,
+        wp,
+        chartY,
+        homeY: Math.min(chartY, 0),
+        awayY: Math.max(chartY, 0),
+        solidY: chartY <= 0 ? chartY : null,
+        dottedY: chartY >= 0 ? chartY : null,
+        homeScore: p.home_score,
+        awayScore: p.away_score,
+      }
+    })
 
   const maxTick = query.data.max_tick
 
-  // Cursor geometry: left = YAXIS_WIDTH + xPct*(100% - PLOT_OFFSET)
-  // Written as calc() so no JS measurement of container width is needed.
   const xPct = maxTick > 0 ? currentTick / maxTick : 0
   const cursorLeft = `calc(${YAXIS_WIDTH}px + ${(xPct * 100).toFixed(4)}% - ${(xPct * PLOT_OFFSET).toFixed(4)}px)`
 
   const nearestWp = findNearestWp(data, currentTick)
-  const wpLabel = nearestWp !== null ? `${Math.round(nearestWp * 100)}%` : null
+  const homeWpLabel = nearestWp !== null ? `${Math.round(nearestWp * 100)}%` : null
   const awayWpLabel = nearestWp !== null ? `${Math.round((1 - nearestWp) * 100)}%` : null
-
-  // Flip badge to the left when cursor is in the rightmost 15% to avoid overflow.
   const badgeOnLeft = xPct > 0.85
 
   function handlePlotClick(e: React.MouseEvent<HTMLDivElement>) {
@@ -121,9 +156,10 @@ export function WinProbChart({ gameId, homeTeam, awayTeam, currentTick, onTickCh
 
   return (
     <div className="border-t border-gray-800 p-4">
+      {/* Away on left, home on right — broadcast convention */}
       <div className="flex justify-between items-baseline text-xs mb-2">
-        <span className="text-blue-400 font-mono font-semibold">{homeTeam} {wpLabel ?? 'Win %'}</span>
-        <span className="text-gray-500 font-mono">{awayTeam} {awayWpLabel ?? '—'}</span>
+        <span className="text-red-400 font-mono font-semibold">{awayTeam} {awayWpLabel ?? 'Win %'}</span>
+        <span className="text-blue-400 font-mono font-semibold">{homeTeam} {homeWpLabel ?? 'Win %'}</span>
       </div>
 
       <div
@@ -131,83 +167,99 @@ export function WinProbChart({ gameId, homeTeam, awayTeam, currentTick, onTickCh
         onClick={handlePlotClick}
       >
         <ResponsiveContainer width="100%" height={200}>
-          <AreaChart data={data} margin={{ top: 4, right: RIGHT_MARGIN, left: 0, bottom: 4 }}>
-            {/*
-              PDX-51: Green/red linearGradient anchored to Y-axis domain [0,1].
-              gradientUnits="userSpaceOnUse" with y1/y2 as percentage strings is not
-              supported in all browsers, so we use objectBoundingBox percentages:
-                0%   → top of chart = WP 1.0 → green
-                50%  → midpoint    = WP 0.5 → transition
-                100% → bottom      = WP 0.0 → red
-              This maps exactly to the [0,1] domain since Recharts fills the plot top-to-bottom.
-            */}
-            <defs>
-              <linearGradient id="wpGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%"   stopColor="rgba(34,197,94,0.35)" />
-                <stop offset="50%"  stopColor="rgba(156,163,175,0.15)" />
-                <stop offset="100%" stopColor="rgba(239,68,68,0.35)" />
-              </linearGradient>
-            </defs>
+          <ComposedChart data={data} margin={{ top: 4, right: RIGHT_MARGIN, left: 0, bottom: 4 }}>
             <XAxis
               dataKey="tick"
               domain={[0, maxTick]}
-              tickFormatter={tickToMMSS}
+              type="number"
+              ticks={[0, 900, 1800, 2700, 3600, ...(maxTick > 3600 ? [4500] : [])].filter(t => t <= maxTick)}
+              tickFormatter={(t: number) => {
+                if (t === 0) return 'KO'
+                if (t === 900) return 'Q2'
+                if (t === 1800) return 'Q3'
+                if (t === 2700) return 'Q4'
+                if (t === 3600) return maxTick > 3600 ? 'OT' : 'Final'
+                if (t === 4500) return 'Final'
+                return ''
+              }}
               tick={{ fill: '#9ca3af', fontSize: 10 }}
               tickLine={false}
               axisLine={{ stroke: '#374151' }}
             />
             <YAxis
-              domain={[0, 1]}
-              tickFormatter={(v: number) => `${Math.round(v * 100)}%`}
+              domain={[-1, 1]}
+              ticks={[-1, 0, 1]}
+              tickFormatter={(v: number) => v === 0 ? '50%' : '100%'}
               tick={{ fill: '#9ca3af', fontSize: 10 }}
               tickLine={false}
               axisLine={false}
               width={YAXIS_WIDTH}
             />
-            {/* PDX-52: Custom tooltip showing time, home Win%, and score */}
             <Tooltip content={<WpTooltip homeTeam={homeTeam} awayTeam={awayTeam} />} />
-            {/* 50% baseline */}
-            <ReferenceLine y={0.5} stroke="#6b7280" strokeDasharray="3 3" />
+            {/* 50% midline */}
+            <ReferenceLine y={0} stroke="#6b7280" strokeDasharray="3 3" />
             {/* Quarter boundary lines */}
-            {QUARTER_TICKS.filter((qt) => qt <= maxTick).map((qt, i) => (
-              <ReferenceLine
-                key={qt}
-                x={qt}
-                stroke="#374151"
-                strokeDasharray="4 2"
-                label={{ value: QUARTER_LABELS[i], fill: '#6b7280', fontSize: 10, position: 'top' }}
-              />
+            {QUARTER_TICKS.filter(qt => qt <= maxTick).map((qt) => (
+              <ReferenceLine key={qt} x={qt} stroke="#374151" strokeDasharray="4 2" />
             ))}
-            {/* PDX-51: Area replaces Line; fill uses green/red gradient */}
+            {/* Home fill: below midline (home winning), blue */}
             <Area
-              type="monotone"
-              dataKey="wp"
-              stroke="#3b82f6"
-              strokeWidth={2}
-              fill="url(#wpGradient)"
-              dot={false}
+              dataKey="homeY"
+              fill="rgba(59,130,246,0.18)"
+              stroke="none"
+              baseValue={0}
               isAnimationActive={false}
             />
-          </AreaChart>
+            {/* Away fill: above midline (away winning), red */}
+            <Area
+              dataKey="awayY"
+              fill="rgba(239,68,68,0.18)"
+              stroke="none"
+              baseValue={0}
+              isAnimationActive={false}
+            />
+            {/* Solid blue line — home winning segments (chartY ≤ 0) */}
+            <Line
+              dataKey="solidY"
+              stroke="#3b82f6"
+              strokeWidth={2}
+              dot={false}
+              isAnimationActive={false}
+              connectNulls={false}
+            />
+            {/* Dotted red line — away winning segments (chartY ≥ 0) */}
+            <Line
+              dataKey="dottedY"
+              stroke="#ef4444"
+              strokeWidth={2}
+              strokeDasharray="5 3"
+              dot={false}
+              isAnimationActive={false}
+              connectNulls={false}
+            />
+          </ComposedChart>
         </ResponsiveContainer>
 
-        {/* CSS cursor overlay — updates left only, no SVG re-render */}
+        {/* CSS cursor overlay — x position computation unchanged (YAXIS_WIDTH=40, RIGHT_MARGIN=16 preserved) */}
         <div
           className="absolute inset-y-0 pointer-events-none"
           style={{ left: cursorLeft }}
         >
-          {/* Dashed vertical line */}
           <div
             className="absolute inset-y-[4px] w-0"
-            style={{ borderLeft: '1.5px dashed #ef4444' }}
+            style={{ borderLeft: '1.5px dashed #9ca3af' }}
           />
-          {/* Win % badge */}
-          {wpLabel && (
-            <div
-              className={`absolute top-[6px] flex items-center ${badgeOnLeft ? 'right-2' : 'left-2'}`}
-            >
-              <span className="bg-red-500 text-white text-xs font-semibold rounded-full px-2 py-0.5 leading-none shadow-md tabular-nums">
-                {wpLabel}
+          {awayWpLabel && (
+            <div className={`absolute top-[6px] flex items-center ${badgeOnLeft ? 'right-2' : 'left-2'}`}>
+              <span className="bg-red-600 text-white text-xs font-semibold rounded-full px-2 py-0.5 leading-none shadow-md tabular-nums">
+                {awayWpLabel}
+              </span>
+            </div>
+          )}
+          {homeWpLabel && (
+            <div className={`absolute bottom-[6px] flex items-center ${badgeOnLeft ? 'right-2' : 'left-2'}`}>
+              <span className="bg-blue-600 text-white text-xs font-semibold rounded-full px-2 py-0.5 leading-none shadow-md tabular-nums">
+                {homeWpLabel}
               </span>
             </div>
           )}

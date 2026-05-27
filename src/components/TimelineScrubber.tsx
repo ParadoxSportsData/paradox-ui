@@ -1,8 +1,8 @@
 // src/components/TimelineScrubber.tsx
 // PDX-24: Range slider over 0..maxTick with quarter markers.
 // PDX-50: Play type filter buttons (All/Run/Pass/Scoring) + Prev/Next navigation.
-// PDX-53: Manual MM:SS / raw-seconds text input.
 // PDX-56: Play tick dots on timeline bar update when filter changes (visual feedback).
+// PDX-85: Read-only Q+clock badge replaces elapsed-time text input.
 // Full timeline loaded once via TanStack Query. All scrubbing is local — no HTTP.
 
 import { useState, useMemo, useEffect } from 'react'
@@ -53,35 +53,12 @@ function findClosestPlay(plays: PlaySnapshot[], targetTick: number): PlaySnapsho
   return Math.abs(ceiling.tick - targetTick) < Math.abs(floor.tick - targetTick) ? ceiling : floor
 }
 
-function tickToMMSS(tick: number): string {
-  const m = Math.floor(tick / 60)
-  const s = tick % 60
-  return `${m}:${String(s).padStart(2, '0')}`
-}
-
 // Quarter clock remaining: counts down from 15:00 per quarter, matching play description (MM:SS) prefix.
 function tickToQtrClock(quarter: number, tick: number): string {
   const remaining = Math.max(0, quarter * 900 - tick)
   const m = Math.floor(remaining / 60)
   const s = remaining % 60
   return `${m}:${String(s).padStart(2, '0')}`
-}
-
-// PDX-53: Parse a user-typed time string into seconds.
-// Accepts: "MM:SS" or raw integer seconds. Returns null on invalid input.
-function parseTimeInput(raw: string): number | null {
-  const trimmed = raw.trim()
-  if (/^\d+$/.test(trimmed)) {
-    return parseInt(trimmed, 10)
-  }
-  if (/^\d+:\d{2}$/.test(trimmed)) {
-    const [minPart, secPart] = trimmed.split(':')
-    const minutes = parseInt(minPart, 10)
-    const seconds = parseInt(secPart, 10)
-    if (seconds >= 60) return null
-    return minutes * 60 + seconds
-  }
-  return null
 }
 
 // PDX-50: Filter predicate for Scoring plays.
@@ -103,6 +80,13 @@ const FILTER_LABELS: { key: FilterKey; label: string }[] = [
   { key: 'scoring', label: 'Scoring' },
 ]
 
+const FILTER_ACTIVE_CLASS: Record<FilterKey, string> = {
+  all: 'bg-blue-600 text-white',
+  run: 'bg-green-700 text-white',
+  pass: 'bg-sky-700 text-white',
+  scoring: 'bg-amber-600 text-white',
+}
+
 const QUARTER_TICKS = [900, 1800, 2700, 3600]
 const QUARTER_LABELS = ['Q1', 'Q2', 'Q3', 'Q4']
 
@@ -110,8 +94,8 @@ export function TimelineScrubber({ gameId, value, onTickChange }: TimelineScrubb
   const [tick, setTick] = useState(0)
   // PDX-50
   const [activeFilter, setActiveFilter] = useState<FilterKey>('all')
-  // PDX-53: controlled input value mirrors tick as MM:SS; user can freely edit it
-  const [timeInputValue, setTimeInputValue] = useState('0:00')
+  // PDX-72: hover state for clickable dot tooltips
+  const [hoveredTick, setHoveredTick] = useState<number | null>(null)
 
   const query = useQuery({
     queryKey: ['timeline', gameId],
@@ -125,7 +109,6 @@ export function TimelineScrubber({ gameId, value, onTickChange }: TimelineScrubb
     if (value === undefined || value === tick) return
     const play = query.data ? findNearestPlay(query.data.plays, value) : null
     setTick(value)
-    setTimeInputValue(tickToMMSS(value))
     onTickChange(value, play)
   }, [value]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -167,10 +150,8 @@ export function TimelineScrubber({ gameId, value, onTickChange }: TimelineScrubb
     return null
   }
 
-  // Shared state-update helper: update tick, sync input display, fire callback
   function applyTick(newTick: number, play: PlaySnapshot | null) {
     setTick(newTick)
-    setTimeInputValue(tickToMMSS(newTick))
     onTickChange(newTick, play)
   }
 
@@ -200,29 +181,6 @@ export function TimelineScrubber({ gameId, value, onTickChange }: TimelineScrubb
   function handleNext() {
     const target = nextTick()
     if (target) applyTick(target.tick, target.play)
-  }
-
-  // PDX-53: commit typed time value
-  function commitTimeInput() {
-    const parsed = parseTimeInput(timeInputValue)
-    if (parsed === null) {
-      setTimeInputValue(tickToMMSS(tick))
-      return
-    }
-    const clamped = Math.max(0, Math.min(parsed, maxTick))
-    if (activeFilter !== 'all' && filteredPlays.length > 0) {
-      const target = findNearestPlay(filteredPlays, clamped)
-      if (target) { applyTick(target.tick, target); return }
-    }
-    const play = query.data ? findNearestPlay(query.data.plays, clamped) : null
-    applyTick(clamped, play)
-  }
-
-  function handleTimeKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
-    if (e.key === 'Enter') {
-      commitTimeInput()
-      ;(e.target as HTMLInputElement).blur()
-    }
   }
 
   const nearestPlay = query.data ? findNearestPlay(query.data.plays, tick) : null
@@ -255,7 +213,7 @@ export function TimelineScrubber({ gameId, value, onTickChange }: TimelineScrubb
         <button
           onClick={handlePrev}
           disabled={!hasPrev}
-          className="px-2 py-1 rounded text-sm bg-gray-700 hover:bg-gray-600 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          className="px-3 py-1 rounded-full text-sm bg-gray-800 border border-gray-700 hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors"
           aria-label="Previous play"
         >
           ←
@@ -267,10 +225,10 @@ export function TimelineScrubber({ gameId, value, onTickChange }: TimelineScrubb
             key={key}
             onClick={() => handleFilterClick(key)}
             className={[
-              'px-3 py-1 rounded text-sm font-medium transition-colors',
+              'px-4 py-1 rounded-full text-sm font-medium transition-colors',
               activeFilter === key
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-700 text-gray-300 hover:bg-gray-600',
+                ? FILTER_ACTIVE_CLASS[key]
+                : 'bg-gray-800 text-gray-400 hover:bg-gray-700 border border-gray-700',
             ].join(' ')}
           >
             {label}
@@ -281,7 +239,7 @@ export function TimelineScrubber({ gameId, value, onTickChange }: TimelineScrubb
         <button
           onClick={handleNext}
           disabled={!hasNext}
-          className="px-2 py-1 rounded text-sm bg-gray-700 hover:bg-gray-600 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          className="px-3 py-1 rounded-full text-sm bg-gray-800 border border-gray-700 hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors"
           aria-label="Next play"
         >
           →
@@ -297,23 +255,10 @@ export function TimelineScrubber({ gameId, value, onTickChange }: TimelineScrubb
         {/* Spacer */}
         <div className="flex-1" />
 
-        {/* PDX-53: Manual time input */}
-        <input
-          type="text"
-          value={timeInputValue}
-          onChange={(e) => setTimeInputValue(e.target.value)}
-          onBlur={commitTimeInput}
-          onKeyDown={handleTimeKeyDown}
-          className="w-20 px-2 py-1 rounded text-sm bg-gray-800 border border-gray-600 text-gray-200 text-center focus:outline-none focus:border-blue-500"
-          aria-label="Jump to time (MM:SS or seconds)"
-          placeholder="0:00"
-        />
-      </div>
-
-      {/* Elapsed / max labels */}
-      <div className="flex justify-between text-xs text-gray-400 mb-1">
-        <span>Q{quarter} — {displayTime}</span>
-        <span>{tickToMMSS(maxTick)}</span>
+        {/* PDX-85: Read-only Q+clock badge */}
+        <div className="w-24 px-2 py-1 rounded text-sm bg-gray-800 border border-gray-700 text-gray-200 text-center font-mono select-none">
+          {quarter === 5 ? 'OT' : `Q${quarter}`} {displayTime}
+        </div>
       </div>
 
       {/* Slider + quarter markers + play tick dots */}
@@ -324,22 +269,51 @@ export function TimelineScrubber({ gameId, value, onTickChange }: TimelineScrubb
           max={maxTick}
           value={tick}
           onChange={handleSliderChange}
-          className="w-full h-2 bg-gray-700 rounded appearance-none cursor-pointer accent-blue-500"
+          className="w-full h-3 bg-gray-800 rounded-full appearance-none cursor-pointer accent-blue-500"
         />
-        {/* PDX-56: Play tick dots — update when filter changes so the visual effect is immediate */}
-        {filteredTicks.map((t) => (
-          <div
-            key={t}
-            className={[
-              'absolute top-0 w-px h-2 pointer-events-none',
-              activeFilter === 'scoring' ? 'bg-amber-400 opacity-90'
-              : activeFilter === 'run'   ? 'bg-green-400 opacity-70'
-              : activeFilter === 'pass'  ? 'bg-sky-400 opacity-70'
-              : 'bg-gray-400 opacity-25',
-            ].join(' ')}
-            style={{ left: `${(t / maxTick) * 100}%` }}
-          />
-        ))}
+        {/* PDX-56/72: Play tick dots — clickable hit zone (8px wide) with hover expand and tooltip */}
+        {filteredPlays.map((play) => {
+          const t = play.tick
+          const isHovered = hoveredTick === t
+          const dotColorClass = activeFilter === 'scoring'
+            ? 'bg-amber-400'
+            : activeFilter === 'run'
+            ? 'bg-green-400'
+            : activeFilter === 'pass'
+            ? 'bg-sky-400'
+            : 'bg-gray-400'
+          const dotOpacityClass = isHovered
+            ? 'opacity-100'
+            : activeFilter === 'all'
+            ? 'opacity-30'
+            : 'opacity-70'
+          return (
+            <div
+              key={t}
+              className="absolute top-0 h-2 w-2 cursor-pointer z-10"
+              style={{ left: `${(t / maxTick) * 100}%`, transform: 'translateX(-50%)' }}
+              onClick={() => applyTick(t, play)}
+              onMouseEnter={() => setHoveredTick(t)}
+              onMouseLeave={() => setHoveredTick(null)}
+            >
+              {/* Visible dot — pointer-events-none, expands on hover */}
+              <div
+                className={[
+                  'pointer-events-none absolute top-0 h-full left-1/2 -translate-x-1/2 transition-all duration-100',
+                  dotColorClass,
+                  dotOpacityClass,
+                  isHovered ? 'w-[3px]' : 'w-px',
+                ].join(' ')}
+              />
+              {/* Tooltip above dot */}
+              {isHovered && (
+                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-gray-900 border border-gray-700 rounded px-1.5 py-0.5 text-xs text-gray-200 whitespace-nowrap z-20 pointer-events-none shadow-lg">
+                  {`${play.quarter === 5 ? 'OT' : `Q${play.quarter}`} ${tickToQtrClock(play.quarter, t)} · ${play.play_type}`}
+                </div>
+              )}
+            </div>
+          )
+        })}
         {/* Quarter marker lines */}
         {QUARTER_TICKS.filter((qt) => qt <= maxTick).map((qt, i) => {
           const pct = (qt / maxTick) * 100

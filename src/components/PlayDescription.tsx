@@ -23,7 +23,7 @@ function badgeClass(playType: string): string {
 export function PlayDescription({ play }: PlayDescriptionProps) {
   if (play === null) {
     return (
-      <div className="bg-gray-800 rounded-lg p-4 h-44 flex items-center">
+      <div className="bg-gray-800 rounded-lg p-4 h-44 flex items-center border border-gray-700/60">
         <p className="text-gray-500 italic text-sm">Waiting for kickoff…</p>
       </div>
     )
@@ -32,7 +32,7 @@ export function PlayDescription({ play }: PlayDescriptionProps) {
   const { play_type, description } = play
 
   return (
-    <div className="bg-gray-800 rounded-lg p-4 h-44 overflow-y-auto">
+    <div className="bg-gray-800 rounded-lg p-4 h-44 overflow-y-auto border border-gray-700/60">
       <div className="flex items-center gap-2 mb-2">
         <div className="text-xs text-gray-500 uppercase tracking-wide">Last Play</div>
         {play_type && (
@@ -41,7 +41,7 @@ export function PlayDescription({ play }: PlayDescriptionProps) {
           </span>
         )}
       </div>
-      <p className="text-gray-200 text-sm leading-relaxed">{description || '–'}</p>
+      <p className="text-gray-100 text-sm leading-relaxed">{description || '–'}</p>
     </div>
   )
 }
