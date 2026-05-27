@@ -147,6 +147,12 @@ export function TimelineScrubber({ gameId, onTickChange }: TimelineScrubberProps
 
   function handleSliderChange(e: React.ChangeEvent<HTMLInputElement>) {
     const newTick = Number(e.target.value)
+    // When a filter is active, snap to the nearest filtered play so the description
+    // always matches the filter — otherwise dragging between dots shows the wrong play type.
+    if (activeFilter !== 'all' && filteredPlays.length > 0) {
+      const target = findNearestPlay(filteredPlays, newTick)
+      if (target) { applyTick(target.tick, target); return }
+    }
     const play = query.data ? findNearestPlay(query.data.plays, newTick) : null
     applyTick(newTick, play)
   }
@@ -170,11 +176,14 @@ export function TimelineScrubber({ gameId, onTickChange }: TimelineScrubberProps
   function commitTimeInput() {
     const parsed = parseTimeInput(timeInputValue)
     if (parsed === null) {
-      // Invalid — reset display without firing onTickChange
       setTimeInputValue(tickToMMSS(tick))
       return
     }
     const clamped = Math.max(0, Math.min(parsed, maxTick))
+    if (activeFilter !== 'all' && filteredPlays.length > 0) {
+      const target = findNearestPlay(filteredPlays, clamped)
+      if (target) { applyTick(target.tick, target); return }
+    }
     const play = query.data ? findNearestPlay(query.data.plays, clamped) : null
     applyTick(clamped, play)
   }
