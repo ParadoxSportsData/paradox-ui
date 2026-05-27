@@ -39,8 +39,8 @@ export function WinProbChart({ gameId, homeTeam, currentTick }: WinProbChartProp
 
   if (query.isLoading) {
     return (
-      <div className="bg-gray-800 rounded-lg p-4 animate-pulse">
-        <div className="h-48 bg-gray-700 rounded" />
+      <div className="border-t border-gray-800 p-4 animate-pulse">
+        <div className="h-48 bg-gray-800 rounded" />
       </div>
     )
   }
@@ -56,7 +56,7 @@ export function WinProbChart({ gameId, homeTeam, currentTick }: WinProbChartProp
   const maxTick = query.data.max_tick
 
   return (
-    <div className="bg-gray-800 rounded-lg p-4">
+    <div className="border-t border-gray-800 p-4">
       <div className="text-xs text-gray-400 mb-2">{homeTeam} Win %</div>
       <ResponsiveContainer width="100%" height={200}>
         <LineChart data={data} margin={{ top: 4, right: 16, left: 0, bottom: 4 }}>

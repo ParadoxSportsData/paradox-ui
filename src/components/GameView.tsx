@@ -110,19 +110,25 @@ export function GameView({ gameId, onBack }: GameViewProps) {
 
       <main className="flex flex-col gap-4 p-4 flex-1">
         <ErrorBoundary>
-          {/* Timeline scrubber — full width */}
+          {/* Scrubber + chart — single cohesive control block, one slider drives both */}
           <div className="bg-gray-900 rounded-lg">
             <TimelineScrubber gameId={gameId} onTickChange={handleTickChange} />
+            <WinProbChart
+              gameId={gameId}
+              homeTeam={homeTeam}
+              awayTeam={awayTeam}
+              currentTick={currentTick}
+            />
           </div>
 
-          {/* Panel row — stacked on mobile, 3-col on desktop */}
+          {/* Game state panels — directly below the visual block */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <ScorePanel homeTeam={homeTeam} awayTeam={awayTeam} play={currentPlay} />
             <DownDistance play={currentPlay} />
             <PlayDescription play={currentPlay} />
           </div>
 
-          {/* Team stats — skeleton while loading, panel when ready, quiet error when unavailable */}
+          {/* Team stats */}
           {statsLoading ? (
             <StatsSkeleton />
           ) : statsData ? (
@@ -136,7 +142,7 @@ export function GameView({ gameId, onBack }: GameViewProps) {
             <div className="text-xs text-gray-600 text-center py-2">Stats unavailable</div>
           ) : null}
 
-          {/* Player stats — omits itself when all arrays empty (tick=0) */}
+          {/* Player stats */}
           {!statsLoading && statsData && (
             <PlayerStatsPanel
               homeTeam={statsData.home_team}
@@ -145,14 +151,6 @@ export function GameView({ gameId, onBack }: GameViewProps) {
               awayPlayers={statsData.players.away}
             />
           )}
-
-          {/* Win probability chart — full width */}
-          <WinProbChart
-            gameId={gameId}
-            homeTeam={homeTeam}
-            awayTeam={awayTeam}
-            currentTick={currentTick}
-          />
         </ErrorBoundary>
       </main>
     </div>

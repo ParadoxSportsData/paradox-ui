@@ -52,7 +52,7 @@ export const MOCK_TIMELINE: GameTimelineResponse = {
       description: '(15:00) D.Masthay kicks 65 yards from GB 35 to NO 0. P.Thomas for 25 yards to NO 25.',
     },
     {
-      tick: 120,
+      tick: 180,
       quarter: 1,
       down: 1,
       yards_to_go: 10,
@@ -166,7 +166,7 @@ export const MOCK_TIMELINE: GameTimelineResponse = {
       posteam: 'NO',
       win_prob: 0.12,
       play_type: 'pass',
-      description: '(5:00) D.Brees pass short middle to J.Graham to GB 38 for -3 yards.',
+      description: '(10:00) D.Brees pass short middle to J.Graham to GB 38 for -3 yards.',
     },
     {
       tick: 3300,
