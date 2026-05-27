@@ -4,12 +4,13 @@
 // PDX-55: blindMode masks final scores until user reveals them.
 // PDX-79: By-team schedule view — team picker → week-by-week schedule with bye rows and playoff rounds.
 // PDX-83: Human-readable game date, week label, FINAL/FINAL—OT status, team display names.
+// PDX-98: Season picker — teams → years → schedule 3-step navigation.
 
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { listGames } from '../api/client'
 import { getDisplayName, teamLogoUrl } from '../lib/nflTeams'
-import { buildTeamSchedule, formatWeekLabel, getAllTeams } from '../lib/schedule'
+import { buildTeamSchedule, formatWeekLabel, getAllTeams, getSeasonsForTeam } from '../lib/schedule'
 import type { GameSummary } from '../api/schemas'
 import type { ScheduleEntry } from '../lib/schedule'
 
@@ -194,12 +195,11 @@ function scheduleRowKey(entry: ScheduleEntry): string {
   return entry.game.game_id
 }
 
-function TeamScheduleView({ abbr, schedule, onBack, onSelect, blindMode }: {
+function YearPicker({ abbr, seasons, onBack, onSelect }: {
   abbr: string
-  schedule: ScheduleEntry[]
+  seasons: number[]
   onBack: () => void
-  onSelect: (id: string) => void
-  blindMode: boolean
+  onSelect: (season: number) => void
 }) {
   return (
     <div className="p-6">
@@ -216,7 +216,51 @@ function TeamScheduleView({ abbr, schedule, onBack, onSelect, blindMode }: {
           className="w-7 h-7 object-contain"
           onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
         />
-        <h2 className="text-xl font-semibold text-gray-100">{getDisplayName(abbr)} &mdash; 2011</h2>
+        <h2 className="text-xl font-semibold text-gray-100">{getDisplayName(abbr)}</h2>
+      </div>
+      {seasons.length === 0 ? (
+        <p className="text-gray-500 text-sm">No seasons available for this team.</p>
+      ) : (
+        <div className="flex flex-wrap gap-2">
+          {seasons.map(season => (
+            <button
+              key={season}
+              onClick={() => onSelect(season)}
+              className="px-5 py-3 rounded-lg bg-gray-800 border border-gray-700/50 text-gray-200 font-mono font-semibold hover:ring-2 hover:ring-blue-500 hover:border-blue-500/50 hover:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all duration-150 cursor-pointer"
+            >
+              {season}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function TeamScheduleView({ abbr, season, schedule, onBack, onSelect, blindMode }: {
+  abbr: string
+  season: number
+  schedule: ScheduleEntry[]
+  onBack: () => void
+  onSelect: (id: string) => void
+  blindMode: boolean
+}) {
+  return (
+    <div className="p-6">
+      <div className="flex items-center gap-3 mb-5">
+        <button
+          onClick={onBack}
+          className="text-xs font-mono px-2.5 py-1.5 rounded bg-gray-800 border border-gray-700 text-gray-400 hover:text-white hover:border-gray-500 transition-colors cursor-pointer shrink-0"
+        >
+          ← {season}
+        </button>
+        <img
+          src={teamLogoUrl(abbr)}
+          alt=""
+          className="w-7 h-7 object-contain"
+          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+        />
+        <h2 className="text-xl font-semibold text-gray-100">{getDisplayName(abbr)} &mdash; {season}</h2>
       </div>
       {schedule.length === 0 ? (
         <p className="text-gray-500 text-sm">No games found for this team.</p>
@@ -231,8 +275,13 @@ function TeamScheduleView({ abbr, schedule, onBack, onSelect, blindMode }: {
   )
 }
 
+type SelectorStep =
+  | { step: 'teams' }
+  | { step: 'years'; team: string }
+  | { step: 'schedule'; team: string; season: number }
+
 export function GameSelector({ onSelect, blindMode }: GameSelectorProps) {
-  const [selectedTeam, setSelectedTeam] = useState<string | null>(null)
+  const [selectorStep, setSelectorStep] = useState<SelectorStep>({ step: 'teams' })
   const [filter, setFilter]             = useState('')
   const query = useQuery({ queryKey: ['games'], queryFn: listGames })
 
@@ -270,27 +319,39 @@ export function GameSelector({ onSelect, blindMode }: GameSelectorProps) {
     )
   }
 
-  const teams = getAllTeams(query.data)
+  if (selectorStep.step === 'years') {
+    const seasons = getSeasonsForTeam(query.data, selectorStep.team)
+    return (
+      <YearPicker
+        abbr={selectorStep.team}
+        seasons={seasons}
+        onBack={() => setSelectorStep({ step: 'teams' })}
+        onSelect={(season) => setSelectorStep({ step: 'schedule', team: selectorStep.team, season })}
+      />
+    )
+  }
 
-  if (selectedTeam) {
-    const schedule = buildTeamSchedule(query.data, selectedTeam)
+  if (selectorStep.step === 'schedule') {
+    const schedule = buildTeamSchedule(query.data, selectorStep.team, selectorStep.season)
     return (
       <TeamScheduleView
-        abbr={selectedTeam}
+        abbr={selectorStep.team}
+        season={selectorStep.season}
         schedule={schedule}
-        onBack={() => setSelectedTeam(null)}
+        onBack={() => setSelectorStep({ step: 'years', team: selectorStep.team })}
         onSelect={onSelect}
         blindMode={blindMode}
       />
     )
   }
 
+  const teams = getAllTeams(query.data)
   return (
     <TeamPicker
       teams={teams}
       filter={filter}
       onFilterChange={setFilter}
-      onSelect={setSelectedTeam}
+      onSelect={(team) => setSelectorStep({ step: 'years', team })}
     />
   )
 }
