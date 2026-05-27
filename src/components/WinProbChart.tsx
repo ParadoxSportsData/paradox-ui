@@ -6,6 +6,8 @@
 //          Solid blue line when home winning, dotted red line when away winning.
 //          Y-axis symmetric [-1,1]: away 100% top, 50% center, home 100% bottom.
 //          Home label right, away label left. YAXIS_WIDTH=40 and RIGHT_MARGIN=16 unchanged.
+// PDX-74: X-axis shows clean quarter-boundary labels (KO/Q2/Q3/Q4/Final) not dense elapsed ticks.
+//          Tooltip shows quarter + clock remaining matching game state bar convention.
 
 import { useQuery } from '@tanstack/react-query'
 import {
@@ -34,8 +36,17 @@ function tickToMMSS(tick: number): string {
   return `${m}:${String(s).padStart(2, '0')}`
 }
 
+// Quarter + clock-remaining format matching game state bar convention.
+function tickToQtrClock(tick: number): string {
+  const quarter = Math.min(Math.ceil((tick + 1) / 900), 5)
+  const remaining = quarter * 900 - tick
+  const m = Math.floor(remaining / 60)
+  const s = remaining % 60
+  const label = quarter === 5 ? 'OT' : `Q${quarter}`
+  return `${label} ${m}:${String(s).padStart(2, '0')}`
+}
+
 const QUARTER_TICKS = [900, 1800, 2700, 3600]
-const QUARTER_LABELS = ['Q1', 'Q2', 'Q3', 'Q4']
 
 // Must match Recharts config — CSS cursor overlay depends on these exact values.
 const YAXIS_WIDTH = 40
@@ -68,7 +79,7 @@ function WpTooltip({ active, payload, homeTeam, awayTeam }: WpTooltipProps) {
   if (!pt) return null
   return (
     <div style={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: 6, padding: '8px 10px' }}>
-      <div style={{ color: '#d1d5db', fontSize: 11 }}>{tickToMMSS(pt.tick)}</div>
+      <div style={{ color: '#d1d5db', fontSize: 11 }}>{tickToQtrClock(pt.tick)}</div>
       <div style={{ color: '#f87171', fontSize: 12 }}>{awayTeam} Win {((1 - pt.wp) * 100).toFixed(1)}%</div>
       <div style={{ color: '#93c5fd', fontSize: 12 }}>{homeTeam} Win {(pt.wp * 100).toFixed(1)}%</div>
       <div style={{ color: '#9ca3af', fontSize: 11 }}>{homeTeam} {pt.homeScore} – {awayTeam} {pt.awayScore}</div>
@@ -158,7 +169,17 @@ export function WinProbChart({ gameId, homeTeam, awayTeam, currentTick, onTickCh
             <XAxis
               dataKey="tick"
               domain={[0, maxTick]}
-              tickFormatter={tickToMMSS}
+              type="number"
+              ticks={[0, 900, 1800, 2700, 3600, ...(maxTick > 3600 ? [4500] : [])].filter(t => t <= maxTick)}
+              tickFormatter={(t: number) => {
+                if (t === 0) return 'KO'
+                if (t === 900) return 'Q2'
+                if (t === 1800) return 'Q3'
+                if (t === 2700) return 'Q4'
+                if (t === 3600) return maxTick > 3600 ? 'OT' : 'Final'
+                if (t === 4500) return 'Final'
+                return ''
+              }}
               tick={{ fill: '#9ca3af', fontSize: 10 }}
               tickLine={false}
               axisLine={{ stroke: '#374151' }}
@@ -176,14 +197,8 @@ export function WinProbChart({ gameId, homeTeam, awayTeam, currentTick, onTickCh
             {/* 50% midline */}
             <ReferenceLine y={0} stroke="#6b7280" strokeDasharray="3 3" />
             {/* Quarter boundary lines */}
-            {QUARTER_TICKS.filter(qt => qt <= maxTick).map((qt, i) => (
-              <ReferenceLine
-                key={qt}
-                x={qt}
-                stroke="#374151"
-                strokeDasharray="4 2"
-                label={{ value: QUARTER_LABELS[i], fill: '#6b7280', fontSize: 10, position: 'top' }}
-              />
+            {QUARTER_TICKS.filter(qt => qt <= maxTick).map((qt) => (
+              <ReferenceLine key={qt} x={qt} stroke="#374151" strokeDasharray="4 2" />
             ))}
             {/* Home fill: below midline (home winning), blue */}
             <Area
