@@ -17,6 +17,7 @@ import { getTimeline, MOCK_MODE } from '../api/client'
 import { fetchGameStats } from '../api/stats'
 import type { PlaySnapshot } from '../api/schemas'
 import type { StatsResponse } from '../api/stats'
+import { getDisplayName, teamLogoUrl } from '../lib/nflTeams'
 
 // Poll every 100ms so stats update live while scrubbing, not just on release.
 const STATS_INTERVAL_MS = 100
@@ -172,8 +173,22 @@ export function GameView({ gameId, onBack, onGoToLab }: GameViewProps) {
       <header className="relative flex items-center px-4 py-3 bg-gray-900 border-b border-gray-700/60">
         <NavMenu onGoToGames={onBack} onGoToLab={onGoToLab} />
         <div className="absolute inset-x-0 flex justify-center pointer-events-none">
-          <h1 className="text-2xl font-bold text-white tracking-tight">
-            {awayTeam} <span className="text-gray-600 font-normal mx-1">@</span> {homeTeam}
+          <h1 className="flex items-center gap-2 text-xl font-bold text-white tracking-tight">
+            <img
+              src={teamLogoUrl(awayTeam)}
+              alt=""
+              className="w-8 h-8 object-contain"
+              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+            />
+            {getDisplayName(awayTeam)}
+            <span className="text-gray-600 font-normal mx-0.5">@</span>
+            {getDisplayName(homeTeam)}
+            <img
+              src={teamLogoUrl(homeTeam)}
+              alt=""
+              className="w-8 h-8 object-contain"
+              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+            />
           </h1>
         </div>
         <span className="ml-auto text-xs text-gray-600 font-mono">{gameId}</span>

@@ -97,6 +97,16 @@ export function getDisplayName(abbr: string): string {
   return getTeam(abbr)?.displayName ?? abbr
 }
 
+// teamLogoUrl returns an ESPN CDN logo URL for any team abbreviation (historical or current).
+// Always resolves to the current franchise's canonical abbreviation before constructing
+// the URL, so "SD" and "LAC" both return the Los Angeles Chargers logo.
+// Returns an empty string for unrecognized abbreviations — callers should hide the image on error.
+export function teamLogoUrl(abbr: string): string {
+  const canonical = getCanonicalAbbr(abbr)
+  if (!canonical) return ''
+  return `https://a.espncdn.com/i/teamlogos/nfl/500/${canonical.toLowerCase()}.png`
+}
+
 // GameIdParts is the parsed result of a game_id string in the format YYYY_WW_AWAY_HOME.
 export interface GameIdParts {
   season: number

@@ -6,7 +6,7 @@
 
 import { useQuery } from '@tanstack/react-query'
 import { listGames } from '../api/client'
-import { getDisplayName } from '../lib/nflTeams'
+import { getDisplayName, teamLogoUrl } from '../lib/nflTeams'
 import type { GameSummary } from '../api/schemas'
 
 interface GameSelectorProps {
@@ -53,9 +53,21 @@ function GameCard({
       )}
 
       {/* Matchup */}
-      <div className="text-base font-bold text-white leading-tight">
+      <div className="flex items-center gap-1.5 text-base font-bold text-white leading-tight flex-wrap">
+        <img
+          src={teamLogoUrl(game.away_team)}
+          alt=""
+          className="w-6 h-6 object-contain flex-shrink-0"
+          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+        />
         {awayDisplay}
-        <span className="text-gray-500 font-normal"> @ </span>
+        <span className="text-gray-500 font-normal mx-0.5">@</span>
+        <img
+          src={teamLogoUrl(game.home_team)}
+          alt=""
+          className="w-6 h-6 object-contain flex-shrink-0"
+          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+        />
         {homeDisplay}
       </div>
 
