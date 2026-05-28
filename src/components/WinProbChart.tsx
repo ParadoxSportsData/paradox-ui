@@ -210,7 +210,7 @@ export function WinProbChart({ gameId, homeTeam, awayTeam, currentTick, onTickCh
             <Area
               dataKey="homeY"
               fill={homeColor}
-              fillOpacity={0.18}
+              fillOpacity={0.35}
               stroke="none"
               baseValue={0}
               isAnimationActive={false}
@@ -219,7 +219,7 @@ export function WinProbChart({ gameId, homeTeam, awayTeam, currentTick, onTickCh
             <Area
               dataKey="awayY"
               fill={awayColor}
-              fillOpacity={0.18}
+              fillOpacity={0.35}
               stroke="none"
               baseValue={0}
               isAnimationActive={false}
@@ -228,7 +228,7 @@ export function WinProbChart({ gameId, homeTeam, awayTeam, currentTick, onTickCh
             <Line
               dataKey="solidY"
               stroke={homeColor}
-              strokeWidth={2}
+              strokeWidth={2.5}
               dot={false}
               isAnimationActive={false}
               connectNulls={false}
@@ -237,7 +237,7 @@ export function WinProbChart({ gameId, homeTeam, awayTeam, currentTick, onTickCh
             <Line
               dataKey="dottedY"
               stroke={awayColor}
-              strokeWidth={2}
+              strokeWidth={2.5}
               strokeDasharray="5 3"
               dot={false}
               isAnimationActive={false}
