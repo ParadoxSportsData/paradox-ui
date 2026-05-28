@@ -8,6 +8,7 @@
 //          Home label right, away label left. YAXIS_WIDTH=40 and RIGHT_MARGIN=16 unchanged.
 // PDX-74: X-axis shows clean quarter-boundary labels (KO/Q2/Q3/Q4/Final) not dense elapsed ticks.
 //          Tooltip shows quarter + clock remaining matching game state bar convention.
+// win_prob from backend is already home-team perspective (compiler normalizes at build time).
 
 import { useQuery } from '@tanstack/react-query'
 import {
@@ -115,9 +116,7 @@ export function WinProbChart({ gameId, homeTeam, awayTeam, currentTick, onTickCh
   const data: ChartPoint[] = query.data.plays
     .filter(p => p.win_prob !== null)
     .map(p => {
-      const rawWp = p.win_prob as number
-      // nflfastR wp = possessing team's WP; normalize to home team's perspective
-      const wp = (p.posteam === null || p.posteam === homeTeam) ? rawWp : 1 - rawWp
+      const wp = p.win_prob as number  // backend normalizes to home-team perspective at compile time
       const chartY = 1 - 2 * wp
       return {
         tick: p.tick,
@@ -211,7 +210,7 @@ export function WinProbChart({ gameId, homeTeam, awayTeam, currentTick, onTickCh
             <Area
               dataKey="homeY"
               fill={homeColor}
-              fillOpacity={0.18}
+              fillOpacity={0.35}
               stroke="none"
               baseValue={0}
               isAnimationActive={false}
@@ -220,7 +219,7 @@ export function WinProbChart({ gameId, homeTeam, awayTeam, currentTick, onTickCh
             <Area
               dataKey="awayY"
               fill={awayColor}
-              fillOpacity={0.18}
+              fillOpacity={0.35}
               stroke="none"
               baseValue={0}
               isAnimationActive={false}
@@ -229,7 +228,7 @@ export function WinProbChart({ gameId, homeTeam, awayTeam, currentTick, onTickCh
             <Line
               dataKey="solidY"
               stroke={homeColor}
-              strokeWidth={2}
+              strokeWidth={2.5}
               dot={false}
               isAnimationActive={false}
               connectNulls={false}
@@ -238,7 +237,7 @@ export function WinProbChart({ gameId, homeTeam, awayTeam, currentTick, onTickCh
             <Line
               dataKey="dottedY"
               stroke={awayColor}
-              strokeWidth={2}
+              strokeWidth={2.5}
               strokeDasharray="5 3"
               dot={false}
               isAnimationActive={false}
