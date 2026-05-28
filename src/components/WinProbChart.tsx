@@ -21,7 +21,7 @@ import {
   Tooltip,
 } from 'recharts'
 import { getTimeline } from '../api/client'
-import { getTeamColor } from '../lib/nflTeams'
+import { pickChartColors } from '../lib/nflTeams'
 import { REGULATION_TICKS, QUARTER_TICKS as SECONDS_PER_QTR, OT1_TICKS } from '../lib/nfl2011'
 import { tickToQtrClockFromTick } from '../lib/tickUtils'
 
@@ -115,7 +115,9 @@ export function WinProbChart({ gameId, homeTeam, awayTeam, currentTick, onTickCh
   const data: ChartPoint[] = query.data.plays
     .filter(p => p.win_prob !== null)
     .map(p => {
-      const wp = p.win_prob as number
+      const rawWp = p.win_prob as number
+      // nflfastR wp = possessing team's WP; normalize to home team's perspective
+      const wp = (p.posteam === null || p.posteam === homeTeam) ? rawWp : 1 - rawWp
       const chartY = 1 - 2 * wp
       return {
         tick: p.tick,
@@ -131,8 +133,7 @@ export function WinProbChart({ gameId, homeTeam, awayTeam, currentTick, onTickCh
     })
 
   const maxTick = query.data.max_tick
-  const homeColor = getTeamColor(homeTeam)
-  const awayColor = getTeamColor(awayTeam)
+  const [homeColor, awayColor] = pickChartColors(homeTeam, awayTeam)
 
   const xPct = maxTick > 0 ? currentTick / maxTick : 0
   const cursorLeft = `calc(${YAXIS_WIDTH}px + ${(xPct * 100).toFixed(4)}% - ${(xPct * PLOT_OFFSET).toFixed(4)}px)`
@@ -140,7 +141,6 @@ export function WinProbChart({ gameId, homeTeam, awayTeam, currentTick, onTickCh
   const nearestWp = findNearestWp(data, currentTick)
   const homeWpLabel = nearestWp !== null ? `${Math.round(nearestWp * 100)}%` : null
   const awayWpLabel = nearestWp !== null ? `${Math.round((1 - nearestWp) * 100)}%` : null
-  const badgeOnLeft = xPct > 0.85
 
   function handlePlotClick(e: React.MouseEvent<HTMLDivElement>) {
     if (!onTickChange || maxTick === 0) return
@@ -257,14 +257,14 @@ export function WinProbChart({ gameId, homeTeam, awayTeam, currentTick, onTickCh
             style={{ borderLeft: '1.5px dashed #9ca3af' }}
           />
           {awayWpLabel && (
-            <div className={`absolute top-[6px] flex items-center ${badgeOnLeft ? 'right-2' : 'left-2'}`}>
+            <div className="absolute top-[6px] flex items-center left-2">
               <span className="text-white text-xs font-semibold rounded-full px-2 py-0.5 leading-none shadow-md tabular-nums" style={{ backgroundColor: awayColor }}>
                 {awayWpLabel}
               </span>
             </div>
           )}
           {homeWpLabel && (
-            <div className={`absolute bottom-[6px] flex items-center ${badgeOnLeft ? 'right-2' : 'left-2'}`}>
+            <div className="absolute bottom-[6px] flex items-center left-2">
               <span className="text-white text-xs font-semibold rounded-full px-2 py-0.5 leading-none shadow-md tabular-nums" style={{ backgroundColor: homeColor }}>
                 {homeWpLabel}
               </span>

@@ -3,14 +3,17 @@
 // PDX-55: blindMode applies to game selection only — masks final scores on cards.
 // PDX-66: View discriminated union replaces selectedGameId binary state.
 // PDX-86: Hash-based routing — each view maps to a URL hash so browser back/forward work.
+//         Selector sub-steps encoded as #/team/SEA and #/team/SEA/2011 so back button
+//         restores team picker and year picker steps correctly.
 
 import { useState, useEffect } from 'react'
 import { GameSelector } from './components/GameSelector'
+import type { SelectorStep } from './components/GameSelector'
 import { GameView } from './components/GameView'
 import { Lab } from './components/Lab'
 
 type View =
-  | { mode: 'selector' }
+  | { mode: 'selector'; selectorStep: SelectorStep }
   | { mode: 'game'; gameId: string }
   | { mode: 'lab' }
 
@@ -21,7 +24,20 @@ function parseUrl(): View {
     if (gameId) return { mode: 'game', gameId }
   }
   if (hash === '#/lab') return { mode: 'lab' }
-  return { mode: 'selector' }
+  if (hash.startsWith('#/team/')) {
+    const rest = hash.slice(7)
+    const slash = rest.indexOf('/')
+    if (slash !== -1) {
+      const team = decodeURIComponent(rest.slice(0, slash))
+      const season = parseInt(rest.slice(slash + 1), 10)
+      if (team && !isNaN(season)) {
+        return { mode: 'selector', selectorStep: { step: 'schedule', team, season } }
+      }
+    }
+    const team = decodeURIComponent(rest)
+    if (team) return { mode: 'selector', selectorStep: { step: 'years', team } }
+  }
+  return { mode: 'selector', selectorStep: { step: 'teams' } }
 }
 
 // Clock face with a probability S-curve cutting through it.
@@ -70,10 +86,17 @@ function App() {
   }, [])
 
   function navigate(newView: View) {
-    const url =
-      newView.mode === 'game' ? `#/game/${encodeURIComponent(newView.gameId)}`
-      : newView.mode === 'lab' ? '#/lab'
-      : '/'
+    let url: string
+    if (newView.mode === 'game') {
+      url = `#/game/${encodeURIComponent(newView.gameId)}`
+    } else if (newView.mode === 'lab') {
+      url = '#/lab'
+    } else {
+      const ss = newView.selectorStep
+      if (ss.step === 'years') url = `#/team/${encodeURIComponent(ss.team)}`
+      else if (ss.step === 'schedule') url = `#/team/${encodeURIComponent(ss.team)}/${ss.season}`
+      else url = '/'
+    }
     window.history.pushState(null, '', url)
     setView(newView)
   }
@@ -90,14 +113,14 @@ function App() {
     return (
       <GameView
         gameId={view.gameId}
-        onBack={() => navigate({ mode: 'selector' })}
+        onBack={() => navigate({ mode: 'selector', selectorStep: { step: 'teams' } })}
         onGoToLab={() => navigate({ mode: 'lab' })}
       />
     )
   }
 
   if (view.mode === 'lab') {
-    return <Lab onBack={() => navigate({ mode: 'selector' })} />
+    return <Lab onBack={() => navigate({ mode: 'selector', selectorStep: { step: 'teams' } })} />
   }
 
   return (
@@ -121,6 +144,8 @@ function App() {
         </div>
       </header>
       <GameSelector
+        selectorStep={view.mode === 'selector' ? view.selectorStep : { step: 'teams' }}
+        onStepChange={(ss) => navigate({ mode: 'selector', selectorStep: ss })}
         onSelect={(gameId) => navigate({ mode: 'game', gameId })}
         blindMode={blindMode}
       />
