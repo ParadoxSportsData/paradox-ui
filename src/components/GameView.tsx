@@ -18,6 +18,7 @@ import { fetchGameStats } from '../api/stats'
 import type { PlaySnapshot } from '../api/schemas'
 import type { StatsResponse } from '../api/stats'
 import { getDisplayName, teamLogoUrl } from '../lib/nflTeams'
+import { hideImgOnError } from '../lib/imgUtils'
 
 // Poll every 100ms so stats update live while scrubbing, not just on release.
 const STATS_INTERVAL_MS = 100
@@ -178,7 +179,7 @@ export function GameView({ gameId, onBack, onGoToLab }: GameViewProps) {
               src={teamLogoUrl(awayTeam)}
               alt=""
               className="w-8 h-8 object-contain"
-              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+              onError={hideImgOnError}
             />
             {getDisplayName(awayTeam)}
             <span className="text-gray-600 font-normal mx-0.5">@</span>
@@ -187,7 +188,7 @@ export function GameView({ gameId, onBack, onGoToLab }: GameViewProps) {
               src={teamLogoUrl(homeTeam)}
               alt=""
               className="w-8 h-8 object-contain"
-              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+              onError={hideImgOnError}
             />
           </h1>
         </div>
