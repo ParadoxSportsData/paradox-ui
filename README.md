@@ -17,6 +17,43 @@ React + TypeScript frontend for the ParadoxSportsData platform. Displays NFL gam
 
 ---
 
+## Architecture
+
+### Component hierarchy
+
+```mermaid
+graph TD
+    App["App.tsx\nview state · blind mode"]
+    Selector["GameSelector\ngame list · Lab button"]
+    GameView["GameView\nselected game"]
+    Lab["Lab\nscenario simulator"]
+
+    App --> Selector
+    App --> GameView
+    App --> Lab
+
+    GameView --> ScoreBar["ScoreBar\nscore · quarter · possession · win%"]
+    GameView --> WinProbChart["WinProbChart\nclick-to-seek timeline"]
+    GameView --> Scrubber["TimelineScrubber\nplay-index scrubber"]
+    GameView --> TeamStats["TeamStatsPanel\nteam box score"]
+    GameView --> PlayerStats["PlayerStatsPanel\nplayer box score"]
+```
+
+### Backend data flow
+
+```mermaid
+flowchart LR
+    CG["clock-gate :8080\n/games · /timeline · /state"]
+    ST["paradox-stats :8001\n/game/{id}/stats"]
+    PR["paradox-predict :8002\nPOST /predict/scenario"]
+
+    CG -->|"game list + state"| GV["GameView\nScoreBar · WinProbChart · Scrubber"]
+    ST -->|"box score"| Panels["TeamStatsPanel\nPlayerStatsPanel"]
+    PR -->|"win probability"| Lab2["Lab\nscenario simulator"]
+```
+
+---
+
 ## Prerequisites
 
 - Node.js 20+ (`node --version` to check)
