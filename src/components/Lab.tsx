@@ -1,5 +1,5 @@
 // src/components/Lab.tsx
-// PDX-67: Scenario Simulator — port of paradox-platform/paradox-web/app/lab/page.tsx.
+// PDX-67: Scenario Simulator.
 // Adapted: removed "use client", added onBack prop, replaced fetch with predictScenario().
 // PDX-120: Extracted useScenarioPrediction hook, WinProbGauge component, footballUtils.
 

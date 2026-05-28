@@ -78,7 +78,7 @@ Open [http://localhost:5173](http://localhost:5173).
 Start all backend services first (each in its own terminal):
 
 ```bash
-# 1. paradox-clock-gate (port 8080) — requires paradox-platform data next to this repo
+# 1. paradox-clock-gate (port 8080)
 cd paradox-clock-gate && go build ./cmd/clock-gate/ && ./clock-gate serve
 
 # 2. paradox-stats (port 8001)
