@@ -23,19 +23,19 @@ export function ScorePanel({ homeTeam, awayTeam, play }: ScorePanelProps) {
           {posteam === awayTeam && (
             <span className="text-yellow-400 text-sm">▶</span>
           )}
-          <span className="text-xs font-mono font-bold uppercase tracking-widest text-gray-500">{awayTeam}</span>
+          <span className="text-xs font-mono font-bold uppercase tracking-widest text-gray-400">{awayTeam}</span>
         </div>
         <span className="text-4xl font-black tabular-nums text-white">
           {awayScore}
         </span>
       </div>
 
-      <div className="text-gray-700 text-xl font-light">–</div>
+      <div className="text-gray-500 text-xl font-light">–</div>
 
       {/* Home team */}
       <div className="flex flex-col items-center flex-1">
         <div className="flex items-center gap-1.5 mb-1">
-          <span className="text-xs font-mono font-bold uppercase tracking-widest text-gray-500">{homeTeam}</span>
+          <span className="text-xs font-mono font-bold uppercase tracking-widest text-gray-400">{homeTeam}</span>
           {posteam === homeTeam && (
             <span className="text-yellow-400 text-sm">◀</span>
           )}

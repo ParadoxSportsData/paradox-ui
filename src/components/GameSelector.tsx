@@ -13,6 +13,8 @@ import { getDisplayName, teamLogoUrl } from '../lib/nflTeams'
 import { buildTeamSchedule, formatWeekLabel, getAllTeams, getSeasonsForTeam } from '../lib/schedule'
 import type { GameSummary } from '../api/schemas'
 import type { ScheduleEntry } from '../lib/schedule'
+import { REGULATION_TICKS } from '../lib/nfl2011'
+import { hideImgOnError } from '../lib/imgUtils'
 
 interface GameSelectorProps {
   onSelect: (gameId: string) => void
@@ -34,7 +36,7 @@ function formatGameDate(isoDate: string | undefined, week: number | undefined): 
 }
 
 function GameCard({ game, onSelect, blindMode }: { game: GameSummary; onSelect: (id: string) => void; blindMode: boolean }) {
-  const isOT = game.duration > 3600
+  const isOT = game.duration > REGULATION_TICKS
   const awayDisplay = getDisplayName(game.away_team)
   const homeDisplay = getDisplayName(game.home_team)
   const dateLabel = formatGameDate(game.game_date, game.week)
@@ -44,12 +46,12 @@ function GameCard({ game, onSelect, blindMode }: { game: GameSummary; onSelect: 
       onClick={() => onSelect(game.game_id)}
       className="text-left bg-gray-800 rounded-lg p-4 cursor-pointer border border-gray-700/50 hover:ring-2 hover:ring-blue-500 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/40 focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all duration-150"
     >
-      {dateLabel && <div className="text-xs text-gray-500 mb-1.5">{dateLabel}</div>}
+      {dateLabel && <div className="text-xs text-gray-400 mb-1.5">{dateLabel}</div>}
       <div className="flex items-center gap-1.5 text-base font-bold text-white leading-tight flex-wrap">
-        <img src={teamLogoUrl(game.away_team)} alt="" className="w-6 h-6 object-contain flex-shrink-0" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
+        <img src={teamLogoUrl(game.away_team)} alt="" className="w-6 h-6 object-contain flex-shrink-0" onError={hideImgOnError} />
         {awayDisplay}
         <span className="text-gray-500 font-normal mx-0.5">@</span>
-        <img src={teamLogoUrl(game.home_team)} alt="" className="w-6 h-6 object-contain flex-shrink-0" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
+        <img src={teamLogoUrl(game.home_team)} alt="" className="w-6 h-6 object-contain flex-shrink-0" onError={hideImgOnError} />
         {homeDisplay}
       </div>
       <div className="text-2xl font-mono mt-2">
@@ -94,7 +96,7 @@ function TeamButton({ abbr, onSelect }: { abbr: string; onSelect: (abbr: string)
         src={teamLogoUrl(abbr)}
         alt=""
         className="w-6 h-6 object-contain flex-shrink-0"
-        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+        onError={hideImgOnError}
       />
       {getDisplayName(abbr)}
     </button>
@@ -164,12 +166,12 @@ function ScheduleRow({ entry, onSelect, blindMode }: {
       className="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg bg-gray-800 border border-gray-700/50 hover:ring-2 hover:ring-blue-500 hover:border-blue-500/50 focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all duration-150 text-left cursor-pointer"
     >
       <span className="w-32 text-xs font-mono text-gray-400 shrink-0">{label}</span>
-      <span className="text-xs text-gray-500 shrink-0 w-5">{isHome ? 'vs' : '@'}</span>
+      <span className="text-xs text-gray-400 shrink-0 w-5">{isHome ? 'vs' : '@'}</span>
       <img
         src={teamLogoUrl(opponent)}
         alt=""
         className="w-5 h-5 object-contain flex-shrink-0"
-        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+        onError={hideImgOnError}
       />
       <span className="flex-1 text-sm font-medium text-gray-200">{getDisplayName(opponent)}</span>
       <div className="flex items-center gap-1.5 shrink-0">
@@ -181,7 +183,7 @@ function ScheduleRow({ entry, onSelect, blindMode }: {
         {isOT && (
           <span className="text-xs font-mono bg-amber-900/60 text-amber-400 border border-amber-700/50 px-1 py-0.5 rounded">OT</span>
         )}
-        <span className="text-xs text-gray-500 ml-0.5">FINAL</span>
+        <span className="text-xs text-gray-400 ml-0.5">FINAL</span>
       </div>
     </button>
   )
@@ -206,7 +208,7 @@ function YearPicker({ abbr, seasons, onBack, onSelect }: {
       <div className="flex items-center gap-3 mb-5">
         <button
           onClick={onBack}
-          className="text-xs font-mono px-2.5 py-1.5 rounded bg-gray-800 border border-gray-700 text-gray-400 hover:text-white hover:border-gray-500 transition-colors cursor-pointer shrink-0"
+          className="text-xs font-mono px-2.5 py-2 rounded bg-gray-800 border border-gray-700 text-gray-400 hover:text-white hover:border-gray-500 transition-colors cursor-pointer shrink-0 focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
           ← All Teams
         </button>
@@ -214,7 +216,7 @@ function YearPicker({ abbr, seasons, onBack, onSelect }: {
           src={teamLogoUrl(abbr)}
           alt=""
           className="w-7 h-7 object-contain"
-          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+          onError={hideImgOnError}
         />
         <h2 className="text-xl font-semibold text-gray-100">{getDisplayName(abbr)}</h2>
       </div>
@@ -250,15 +252,15 @@ function TeamScheduleView({ abbr, season, schedule, onBack, onSelect, blindMode 
       <div className="flex items-center gap-3 mb-5">
         <button
           onClick={onBack}
-          className="text-xs font-mono px-2.5 py-1.5 rounded bg-gray-800 border border-gray-700 text-gray-400 hover:text-white hover:border-gray-500 transition-colors cursor-pointer shrink-0"
+          className="text-xs font-mono px-2.5 py-2 rounded bg-gray-800 border border-gray-700 text-gray-400 hover:text-white hover:border-gray-500 transition-colors cursor-pointer shrink-0 focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
-          ← {season}
+          ← Select Year
         </button>
         <img
           src={teamLogoUrl(abbr)}
           alt=""
           className="w-7 h-7 object-contain"
-          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+          onError={hideImgOnError}
         />
         <h2 className="text-xl font-semibold text-gray-100">{getDisplayName(abbr)} &mdash; {season}</h2>
       </div>
@@ -302,7 +304,7 @@ export function GameSelector({ onSelect, blindMode }: GameSelectorProps) {
           <span>Failed to load games. Is the server running?</span>
           <button
             onClick={() => query.refetch()}
-            className="ml-4 bg-red-700 hover:bg-red-600 text-white px-3 py-1 rounded text-sm"
+            className="ml-4 bg-red-700 hover:bg-red-600 text-white px-3 py-2 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             Retry
           </button>

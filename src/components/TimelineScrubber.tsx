@@ -13,57 +13,13 @@ import { useState, useMemo, useEffect, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getTimeline } from '../api/client'
 import type { PlaySnapshot } from '../api/schemas'
+import { REGULATION_TICKS, QUARTER_TICKS as SECONDS_PER_QTR, OT1_TICKS } from '../lib/nfl2011'
+import { findNearestPlay, findClosestPlay, tickToQtrClock } from '../lib/tickUtils'
 
 interface TimelineScrubberProps {
   gameId: string
   value?: number  // optional controlled tick — set externally (e.g. chart click)
   onTickChange: (tick: number, play: PlaySnapshot | null) => void
-}
-
-// O(log N) binary search: largest play.tick <= targetTick (floor).
-// Returns null when targetTick is before the first play — no state has occurred yet.
-function findNearestPlay(plays: PlaySnapshot[], targetTick: number): PlaySnapshot | null {
-  if (plays.length === 0) return null
-  let lo = 0
-  let hi = plays.length - 1
-  let result: PlaySnapshot | null = null
-  while (lo <= hi) {
-    const mid = (lo + hi) >> 1
-    if (plays[mid].tick <= targetTick) {
-      result = plays[mid]
-      lo = mid + 1
-    } else {
-      hi = mid - 1
-    }
-  }
-  return result
-}
-
-// Closest play by absolute distance — used for slider snapping so a click
-// slightly before a dot's tick (due to range input thumb offset) still snaps
-// to the correct dot rather than the previous one.
-function findClosestPlay(plays: PlaySnapshot[], targetTick: number): PlaySnapshot | null {
-  if (plays.length === 0) return null
-  const floor = findNearestPlay(plays, targetTick)
-  // Find the ceiling: first play with tick > targetTick
-  let ceiling: PlaySnapshot | null = null
-  if (floor) {
-    const idx = plays.indexOf(floor)
-    if (idx + 1 < plays.length) ceiling = plays[idx + 1]
-  } else {
-    ceiling = plays[0]
-  }
-  if (!floor) return ceiling
-  if (!ceiling) return floor
-  return Math.abs(ceiling.tick - targetTick) < Math.abs(floor.tick - targetTick) ? ceiling : floor
-}
-
-// Quarter clock remaining: counts down from 15:00 per quarter, matching play description (MM:SS) prefix.
-function tickToQtrClock(quarter: number, tick: number): string {
-  const remaining = Math.max(0, quarter * 900 - tick)
-  const m = Math.floor(remaining / 60)
-  const s = remaining % 60
-  return `${m}:${String(s).padStart(2, '0')}`
 }
 
 // PDX-50: Filter predicate for Scoring plays.
@@ -92,39 +48,50 @@ const FILTER_ACTIVE_CLASS: Record<FilterKey, string> = {
   scoring: 'bg-amber-600 text-white',
 }
 
-const QUARTER_TICKS = [900, 1800, 2700, 3600]
+const QUARTER_TICK_MARKS = [SECONDS_PER_QTR, SECONDS_PER_QTR * 2, SECONDS_PER_QTR * 3, REGULATION_TICKS]
 const QUARTER_LABELS = ['Q1', 'Q2', 'Q3', 'Q4']
 
 export function TimelineScrubber({ gameId, value, onTickChange }: TimelineScrubberProps) {
   const [tick, setTick] = useState(0)
+  // Ref to read current tick without it being a dep of the sync effect below.
+  const tickRef = useRef(tick)
+  useEffect(() => { tickRef.current = tick }, [tick])
   // PDX-50
   const [activeFilter, setActiveFilter] = useState<FilterKey>('all')
   // PDX-72: hover state for clickable dot tooltips
   const [hoveredTick, setHoveredTick] = useState<number | null>(null)
   // PDX-90: tracks pre-game state — true until first navigation; drives nextTick to include tick=0 plays.
   const isPreGameRef = useRef(true)
+  // Stable ref to onTickChange so the sync effect doesn't re-fire on every parent re-render.
+  const onTickChangeRef = useRef(onTickChange)
+  useEffect(() => { onTickChangeRef.current = onTickChange })
 
   const query = useQuery({
     queryKey: ['timeline', gameId],
     queryFn: () => getTimeline(gameId),
   })
 
-  const maxTick = query.data?.max_tick ?? 3600
+  const maxTick = query.data?.max_tick ?? REGULATION_TICKS
 
   // Sync slider when an external caller (e.g. chart click) drives the tick.
+  // Deps: value (the external driver), query.data (needed for findNearestPlay).
+  // tickRef.current is read (not depended on) so this effect fires only when the external
+  // value prop changes — not when local tick state changes — preventing feedback loops.
+  // onTickChange is accessed via ref so new parent instances don't retrigger this effect.
+  const queryData = query.data
   useEffect(() => {
-    if (value === undefined || value === tick) return
+    if (value === undefined || value === tickRef.current) return
     if (value === 0) {
       isPreGameRef.current = true
       setTick(0)
-      onTickChange(0, null)
+      onTickChangeRef.current(0, null)
       return
     }
     isPreGameRef.current = false
-    const play = query.data ? findNearestPlay(query.data.plays, value) : null
+    const play = queryData ? findNearestPlay(queryData.plays, value) : null
     setTick(value)
-    onTickChange(value, play)
-  }, [value]) // eslint-disable-line react-hooks/exhaustive-deps
+    onTickChangeRef.current(value, play)
+  }, [value, queryData])
 
   // PDX-50: derive filtered ticks from timeline data + active filter
   const filteredPlays = useMemo<PlaySnapshot[]>(() => {
@@ -246,7 +213,7 @@ export function TimelineScrubber({ gameId, value, onTickChange }: TimelineScrubb
         <button
           onClick={handlePrev}
           disabled={!hasPrev}
-          className="px-3 py-1 rounded-full text-sm bg-gray-800 border border-gray-700 hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors"
+          className="px-3 py-2 rounded-full text-sm bg-gray-800 border border-gray-700 hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
           aria-label="Previous play"
         >
           ←
@@ -258,7 +225,7 @@ export function TimelineScrubber({ gameId, value, onTickChange }: TimelineScrubb
             key={key}
             onClick={() => handleFilterClick(key)}
             className={[
-              'px-4 py-1 rounded-full text-sm font-medium transition-colors',
+              'px-4 py-2 rounded-full text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500',
               activeFilter === key
                 ? FILTER_ACTIVE_CLASS[key]
                 : 'bg-gray-800 text-gray-400 hover:bg-gray-700 border border-gray-700',
@@ -272,7 +239,7 @@ export function TimelineScrubber({ gameId, value, onTickChange }: TimelineScrubb
         <button
           onClick={handleNext}
           disabled={!hasNext}
-          className="px-3 py-1 rounded-full text-sm bg-gray-800 border border-gray-700 hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors"
+          className="px-3 py-2 rounded-full text-sm bg-gray-800 border border-gray-700 hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
           aria-label="Next play"
         >
           →
@@ -323,9 +290,13 @@ export function TimelineScrubber({ gameId, value, onTickChange }: TimelineScrubb
           return (
             <div
               key={t}
-              className="absolute top-0 h-2 w-2 cursor-pointer z-10"
+              role="button"
+              tabIndex={0}
+              aria-label={`${play.quarter === 5 ? 'OT' : `Q${play.quarter}`} ${tickToQtrClock(play.quarter, t)} · ${play.play_type}`}
+              className="absolute top-0 h-4 w-4 -mt-1 cursor-pointer z-10 focus:outline-none focus-visible:ring-1 focus-visible:ring-blue-500 rounded-sm"
               style={{ left: `${(t / maxTick) * 100}%`, transform: 'translateX(-50%)' }}
               onClick={() => applyTick(t, play)}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); applyTick(t, play) } }}
               onMouseEnter={() => setHoveredTick(t)}
               onMouseLeave={() => setHoveredTick(null)}
             >
@@ -348,7 +319,7 @@ export function TimelineScrubber({ gameId, value, onTickChange }: TimelineScrubb
           )
         })}
         {/* Quarter marker lines */}
-        {QUARTER_TICKS.filter((qt) => qt <= maxTick).map((qt, i) => {
+        {QUARTER_TICK_MARKS.filter((qt) => qt <= maxTick).map((qt, i) => {
           const pct = (qt / maxTick) * 100
           return (
             <div
@@ -362,10 +333,10 @@ export function TimelineScrubber({ gameId, value, onTickChange }: TimelineScrubb
           )
         })}
         {/* OT marker */}
-        {maxTick > 3600 && (
+        {maxTick > REGULATION_TICKS && (
           <div
             className="absolute top-0 flex flex-col items-center pointer-events-none"
-            style={{ left: `${(4500 / maxTick) * 100}%`, transform: 'translateX(-50%)' }}
+            style={{ left: `${(OT1_TICKS / maxTick) * 100}%`, transform: 'translateX(-50%)' }}
           >
             <div className="w-px h-3 bg-yellow-600 mt-0.5" />
             <span className="text-xs text-yellow-600 mt-0.5">OT</span>

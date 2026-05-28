@@ -45,7 +45,7 @@ function BlindModeButton({ blindMode, onToggle }: { blindMode: boolean; onToggle
   return (
     <button
       onClick={onToggle}
-      className={`text-xs font-mono px-3 py-1.5 rounded-md border transition-colors ${
+      className={`text-xs font-mono px-3 py-2 rounded-md border transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 ${
         blindMode
           ? 'border-amber-500/60 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20'
           : 'border-gray-700 text-gray-400 hover:text-gray-200 hover:border-gray-500'
@@ -112,7 +112,7 @@ function App() {
         <div className="flex items-center gap-3">
           <button
             onClick={() => navigate({ mode: 'lab' })}
-            className="text-xs font-mono px-3 py-1.5 rounded-md border border-gray-700 text-gray-400 hover:text-gray-200 hover:border-gray-500 transition-colors"
+            className="text-xs font-mono px-3 py-2 rounded-md border border-gray-700 text-gray-400 hover:text-gray-200 hover:border-gray-500 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             The Lab
           </button>

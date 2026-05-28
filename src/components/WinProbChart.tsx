@@ -22,6 +22,8 @@ import {
 } from 'recharts'
 import { getTimeline } from '../api/client'
 import { getTeamColor } from '../lib/nflTeams'
+import { REGULATION_TICKS, QUARTER_TICKS as SECONDS_PER_QTR, OT1_TICKS } from '../lib/nfl2011'
+import { tickToQtrClockFromTick } from '../lib/tickUtils'
 
 interface WinProbChartProps {
   gameId: string
@@ -31,17 +33,7 @@ interface WinProbChartProps {
   onTickChange?: (tick: number) => void
 }
 
-// Quarter + clock-remaining format matching game state bar convention.
-function tickToQtrClock(tick: number): string {
-  const quarter = Math.min(Math.ceil((tick + 1) / 900), 5)
-  const remaining = quarter * 900 - tick
-  const m = Math.floor(remaining / 60)
-  const s = remaining % 60
-  const label = quarter === 5 ? 'OT' : `Q${quarter}`
-  return `${label} ${m}:${String(s).padStart(2, '0')}`
-}
-
-const QUARTER_TICKS = [900, 1800, 2700, 3600]
+const QUARTER_TICK_MARKS = [SECONDS_PER_QTR, SECONDS_PER_QTR * 2, SECONDS_PER_QTR * 3, REGULATION_TICKS]
 
 // Must match Recharts config — CSS cursor overlay depends on these exact values.
 const YAXIS_WIDTH = 40
@@ -76,7 +68,7 @@ function WpTooltip({ active, payload, homeTeam, awayTeam, homeColor, awayColor }
   if (!pt) return null
   return (
     <div style={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: 6, padding: '8px 10px' }}>
-      <div style={{ color: '#d1d5db', fontSize: 11 }}>{tickToQtrClock(pt.tick)}</div>
+      <div style={{ color: '#d1d5db', fontSize: 11 }}>{tickToQtrClockFromTick(pt.tick)}</div>
       <div style={{ color: awayColor, fontSize: 12 }}>{awayTeam} Win {((1 - pt.wp) * 100).toFixed(1)}%</div>
       <div style={{ color: homeColor, fontSize: 12 }}>{homeTeam} Win {(pt.wp * 100).toFixed(1)}%</div>
       <div style={{ color: '#9ca3af', fontSize: 11 }}>{homeTeam} {pt.homeScore} – {awayTeam} {pt.awayScore}</div>
@@ -168,8 +160,16 @@ export function WinProbChart({ gameId, homeTeam, awayTeam, currentTick, onTickCh
       </div>
 
       <div
-        className={`relative${onTickChange ? ' cursor-crosshair' : ''}`}
+        role={onTickChange ? 'button' : undefined}
+        tabIndex={onTickChange ? 0 : undefined}
+        aria-label={onTickChange ? 'Win probability chart — click to seek to that game moment' : undefined}
+        className={`relative${onTickChange ? ' cursor-crosshair focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900 rounded-sm' : ''}`}
         onClick={handlePlotClick}
+        onKeyDown={onTickChange ? (e: React.KeyboardEvent<HTMLDivElement>) => {
+          // Left/Right arrow keys seek by 60s increments
+          if (e.key === 'ArrowRight') { e.preventDefault(); onTickChange(Math.min(maxTick, currentTick + 60)) }
+          if (e.key === 'ArrowLeft') { e.preventDefault(); onTickChange(Math.max(0, currentTick - 60)) }
+        } : undefined}
       >
         <ResponsiveContainer width="100%" height={200}>
           <ComposedChart data={data} margin={{ top: 4, right: RIGHT_MARGIN, left: 0, bottom: 4 }}>
@@ -177,14 +177,14 @@ export function WinProbChart({ gameId, homeTeam, awayTeam, currentTick, onTickCh
               dataKey="tick"
               domain={[0, maxTick]}
               type="number"
-              ticks={[0, 900, 1800, 2700, 3600, ...(maxTick > 3600 ? [4500] : [])].filter(t => t <= maxTick)}
+              ticks={[0, SECONDS_PER_QTR, SECONDS_PER_QTR * 2, SECONDS_PER_QTR * 3, REGULATION_TICKS, ...(maxTick > REGULATION_TICKS ? [OT1_TICKS] : [])].filter(t => t <= maxTick)}
               tickFormatter={(t: number) => {
                 if (t === 0) return 'KO'
-                if (t === 900) return 'Q2'
-                if (t === 1800) return 'Q3'
-                if (t === 2700) return 'Q4'
-                if (t === 3600) return maxTick > 3600 ? 'OT' : 'Final'
-                if (t === 4500) return 'Final'
+                if (t === SECONDS_PER_QTR) return 'Q2'
+                if (t === SECONDS_PER_QTR * 2) return 'Q3'
+                if (t === SECONDS_PER_QTR * 3) return 'Q4'
+                if (t === REGULATION_TICKS) return maxTick > REGULATION_TICKS ? 'OT' : 'Final'
+                if (t === OT1_TICKS) return 'Final'
                 return ''
               }}
               tick={{ fill: '#9ca3af', fontSize: 10 }}
@@ -204,7 +204,7 @@ export function WinProbChart({ gameId, homeTeam, awayTeam, currentTick, onTickCh
             {/* 50% midline */}
             <ReferenceLine y={0} stroke="#6b7280" strokeDasharray="3 3" />
             {/* Quarter boundary lines */}
-            {QUARTER_TICKS.filter(qt => qt <= maxTick).map((qt) => (
+            {QUARTER_TICK_MARKS.filter(qt => qt <= maxTick).map((qt) => (
               <ReferenceLine key={qt} x={qt} stroke="#374151" strokeDasharray="4 2" />
             ))}
             {/* Home fill: below midline (home winning) */}
