@@ -6,17 +6,23 @@
 // PDX-83: Human-readable game date, week label, FINAL/FINAL—OT status, team display names.
 // PDX-98: Season picker — teams → years → schedule 3-step navigation.
 
-import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { listGames } from '../api/client'
-import { getDisplayName, teamLogoUrl } from '../lib/nflTeams'
-import { buildTeamSchedule, formatWeekLabel, getAllTeams, getSeasonsForTeam } from '../lib/schedule'
+import { getDisplayName, teamLogoUrl, DIVISION_STRUCTURE } from '../lib/nflTeams'
+import { buildTeamSchedule, formatWeekLabel, getSeasonsForTeam } from '../lib/schedule'
 import type { GameSummary } from '../api/schemas'
 import type { ScheduleEntry } from '../lib/schedule'
 import { REGULATION_TICKS } from '../lib/nfl2011'
 import { hideImgOnError } from '../lib/imgUtils'
 
+export type SelectorStep =
+  | { step: 'teams' }
+  | { step: 'years'; team: string }
+  | { step: 'schedule'; team: string; season: number }
+
 interface GameSelectorProps {
+  selectorStep: SelectorStep
+  onStepChange: (step: SelectorStep) => void
   onSelect: (gameId: string) => void
   blindMode: boolean
 }
@@ -103,38 +109,45 @@ function TeamButton({ abbr, onSelect }: { abbr: string; onSelect: (abbr: string)
   )
 }
 
-function TeamPicker({ teams, filter, onFilterChange, onSelect }: {
-  teams: string[]
-  filter: string
-  onFilterChange: (v: string) => void
-  onSelect: (abbr: string) => void
-}) {
-  const filtered = filter
-    ? teams.filter(t =>
-        getDisplayName(t).toLowerCase().includes(filter.toLowerCase()) ||
-        t.toLowerCase().includes(filter.toLowerCase())
-      )
-    : teams
+function DivisionGroup({ division, teams, onSelect }: { division: string; teams: string[]; onSelect: (abbr: string) => void }) {
+  return (
+    <div>
+      <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">{division}</div>
+      <div className="flex flex-col gap-1">
+        {teams.map(abbr => (
+          <TeamButton key={abbr} abbr={abbr} onSelect={onSelect} />
+        ))}
+      </div>
+    </div>
+  )
+}
 
+function ConferenceDivisionPicker({ onSelect }: { onSelect: (abbr: string) => void }) {
+  const conferences = [
+    { label: 'AFC', divisions: DIVISION_STRUCTURE.filter(d => d.conference === 'AFC') },
+    { label: 'NFC', divisions: DIVISION_STRUCTURE.filter(d => d.conference === 'NFC') },
+  ]
   return (
     <div className="p-6">
-      <h2 className="text-xl font-semibold text-gray-100 mb-4">Select a Team</h2>
-      <input
-        type="text"
-        value={filter}
-        onChange={e => onFilterChange(e.target.value)}
-        placeholder="Filter teams…"
-        className="w-full mb-4 px-3 py-2 rounded-lg bg-gray-800 border border-gray-700 text-gray-200 placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-      />
-      {filtered.length === 0 ? (
-        <p className="text-gray-500 text-sm">No teams match &ldquo;{filter}&rdquo;</p>
-      ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
-          {filtered.map(abbr => (
-            <TeamButton key={abbr} abbr={abbr} onSelect={onSelect} />
-          ))}
-        </div>
-      )}
+      <h2 className="text-xl font-semibold text-gray-100 mb-5">Select a Team</h2>
+      <div className="grid grid-cols-2 gap-8">
+        {conferences.map(({ label, divisions }) => {
+          // divisions arrives East/North/South/West from DIVISION_STRUCTURE order
+          const byDiv = Object.fromEntries(divisions.map(d => [d.division, d.teams]))
+          return (
+            <div key={label}>
+              <div className="text-sm font-bold tracking-widest text-gray-300 uppercase mb-3 border-b border-gray-700 pb-1.5">{label}</div>
+              {/* 2×2 grid: left col = East (top) + North (bottom), right col = South (top) + West (bottom) */}
+              <div className="grid grid-cols-2 gap-x-4 gap-y-5">
+                <DivisionGroup division="East"  teams={byDiv['East']}  onSelect={onSelect} />
+                <DivisionGroup division="South" teams={byDiv['South']} onSelect={onSelect} />
+                <DivisionGroup division="North" teams={byDiv['North']} onSelect={onSelect} />
+                <DivisionGroup division="West"  teams={byDiv['West']}  onSelect={onSelect} />
+              </div>
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }
@@ -277,14 +290,7 @@ function TeamScheduleView({ abbr, season, schedule, onBack, onSelect, blindMode 
   )
 }
 
-type SelectorStep =
-  | { step: 'teams' }
-  | { step: 'years'; team: string }
-  | { step: 'schedule'; team: string; season: number }
-
-export function GameSelector({ onSelect, blindMode }: GameSelectorProps) {
-  const [selectorStep, setSelectorStep] = useState<SelectorStep>({ step: 'teams' })
-  const [filter, setFilter]             = useState('')
+export function GameSelector({ selectorStep, onStepChange, onSelect, blindMode }: GameSelectorProps) {
   const query = useQuery({ queryKey: ['games'], queryFn: listGames })
 
   if (query.isLoading) {
@@ -327,8 +333,8 @@ export function GameSelector({ onSelect, blindMode }: GameSelectorProps) {
       <YearPicker
         abbr={selectorStep.team}
         seasons={seasons}
-        onBack={() => setSelectorStep({ step: 'teams' })}
-        onSelect={(season) => setSelectorStep({ step: 'schedule', team: selectorStep.team, season })}
+        onBack={() => onStepChange({ step: 'teams' })}
+        onSelect={(season) => onStepChange({ step: 'schedule', team: selectorStep.team, season })}
       />
     )
   }
@@ -340,20 +346,16 @@ export function GameSelector({ onSelect, blindMode }: GameSelectorProps) {
         abbr={selectorStep.team}
         season={selectorStep.season}
         schedule={schedule}
-        onBack={() => setSelectorStep({ step: 'years', team: selectorStep.team })}
+        onBack={() => onStepChange({ step: 'years', team: selectorStep.team })}
         onSelect={onSelect}
         blindMode={blindMode}
       />
     )
   }
 
-  const teams = getAllTeams(query.data)
   return (
-    <TeamPicker
-      teams={teams}
-      filter={filter}
-      onFilterChange={setFilter}
-      onSelect={(team) => setSelectorStep({ step: 'years', team })}
+    <ConferenceDivisionPicker
+      onSelect={(team) => onStepChange({ step: 'years', team })}
     />
   )
 }

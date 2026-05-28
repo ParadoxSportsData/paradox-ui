@@ -217,8 +217,8 @@ export function Lab({ onBack }: LabProps) {
                 onChange={(e) => setEraSeason(Number(e.target.value))}
                 className="w-full bg-gray-800 text-white rounded-lg px-4 py-3 border border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 mb-3"
               >
-                <option value={2024}>2024 (Modified Short OT)</option>
-                <option value={2017}>2017 (Modified Short OT)</option>
+                <option value={2024}>2024 (Mod. Short reg / Guaranteed playoffs)</option>
+                <option value={2017}>2017 (Modified Short — all games)</option>
                 <option value={2011}>2011 (Sudden Death reg / Modified playoffs)</option>
               </select>
               <label className="block text-sm font-semibold text-gray-300 mb-3">Game Type</label>
