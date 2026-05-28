@@ -84,9 +84,10 @@ export function Lab({ onBack }: LabProps) {
       <header className="relative flex items-center px-4 py-3 bg-gray-900 border-b border-gray-700/60">
         <NavMenu onGoToGames={onBack} />
         <div className="absolute inset-x-0 flex justify-center pointer-events-none">
-          <h1 className="text-2xl font-bold tracking-tight">
-            The Lab <span className="text-purple-400 font-mono text-lg">Scenario Simulator</span>
-          </h1>
+          <div className="flex flex-col items-center leading-tight">
+            <h1 className="text-xl font-bold tracking-tight text-white">The Lab</h1>
+            <span className="text-xs font-mono text-purple-400 tracking-widest uppercase mt-0.5">Scenario Simulator</span>
+          </div>
         </div>
       </header>
 
@@ -226,7 +227,17 @@ export function Lab({ onBack }: LabProps) {
                 <button onClick={() => setEraWeek(1)} className={`py-3 rounded-lg font-bold transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 ${eraWeek < 19 ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>Regular Season</button>
                 <button onClick={() => setEraWeek(20)} className={`py-3 rounded-lg font-bold transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 ${eraWeek >= 19 ? 'bg-purple-600 text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>Playoffs</button>
               </div>
-              {otEra && <p className="text-xs text-gray-500 mt-3">OT Rules: <span className="text-blue-400 font-mono">{otEra}</span></p>}
+              {otEra && (
+                <div className="mt-3 rounded-md bg-gray-800/60 border border-gray-700/50 px-3 py-2.5">
+                  <p className="text-xs text-gray-500 mb-1">Active rule: <span className="text-blue-400 font-mono">{otEra}</span></p>
+                  <p className="text-xs text-gray-400 leading-snug">
+                    {otEra === 'SUDDEN_DEATH' && 'First score of any kind ends the game immediately. No guaranteed second possession.'}
+                    {otEra === 'MODIFIED' && 'Both teams guaranteed a possession unless the first drive ends in a touchdown. A field goal keeps the game alive.'}
+                    {otEra === 'MODIFIED_SHORT' && 'Same as Modified — both teams guaranteed possession unless the first drive is a TD — but the period is 10 minutes instead of 15.'}
+                    {otEra === 'GUARANTEED' && 'Both teams guaranteed a full possession regardless of what the first team scores. Introduced for NFL playoffs in 2022.'}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 
