@@ -35,7 +35,7 @@ function NavMenu({ onGoToGames, onGoToLab }: { onGoToGames: () => void; onGoToLa
     <div className="relative">
       <button
         onClick={() => setOpen(o => !o)}
-        className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 cursor-pointer transition-colors"
+        className="p-2.5 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
         aria-label="Navigation menu"
         aria-expanded={open}
       >
@@ -51,14 +51,14 @@ function NavMenu({ onGoToGames, onGoToLab }: { onGoToGames: () => void; onGoToLa
           <div className="absolute left-0 top-full mt-1.5 z-20 bg-gray-800 border border-gray-700/60 rounded-lg shadow-xl overflow-hidden min-w-[180px]">
             <button
               onClick={() => { setOpen(false); onGoToGames() }}
-              className="w-full text-left px-4 py-2.5 text-sm text-gray-300 hover:bg-gray-700 hover:text-white transition-colors cursor-pointer"
+              className="w-full text-left px-4 py-2.5 text-sm text-gray-300 hover:bg-gray-700 hover:text-white transition-colors cursor-pointer focus:outline-none focus:bg-gray-700 focus:text-white"
             >
               Game Selection
             </button>
             <div className="border-t border-gray-700/60" />
             <button
               onClick={() => { setOpen(false); onGoToLab() }}
-              className="w-full text-left px-4 py-2.5 text-sm text-gray-300 hover:bg-gray-700 hover:text-white transition-colors cursor-pointer"
+              className="w-full text-left px-4 py-2.5 text-sm text-gray-300 hover:bg-gray-700 hover:text-white transition-colors cursor-pointer focus:outline-none focus:bg-gray-700 focus:text-white"
             >
               The Lab
             </button>

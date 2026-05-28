@@ -17,8 +17,8 @@ function ordinal(n: number): string {
 export function DownDistance({ play }: DownDistanceProps) {
   if (play === null) {
     return (
-      <div className="bg-gray-800 rounded-lg p-4 flex items-center justify-center border border-gray-700/60">
-        <span className="text-gray-500 italic text-sm">Pre-game</span>
+      <div className="bg-gray-800 rounded-lg p-4 min-h-[7rem] flex items-center justify-center border border-gray-700/60">
+        <span className="text-gray-400 italic text-sm">Pre-game</span>
       </div>
     )
   }
@@ -28,9 +28,9 @@ export function DownDistance({ play }: DownDistanceProps) {
   // Kickoff / special — no down
   if (down === null) {
     return (
-      <div className="bg-gray-800 rounded-lg p-4 border border-gray-700/60">
-        <div className="text-xs text-gray-500 uppercase tracking-wide mb-2">Situation</div>
-        <div className="text-xs text-gray-500 mb-0.5">Q{quarter}</div>
+      <div className="bg-gray-800 rounded-lg p-4 min-h-[7rem] border border-gray-700/60">
+        <div className="text-xs text-gray-400 uppercase tracking-wide mb-2">Situation</div>
+        <div className="text-xs text-gray-400 mb-0.5">Q{quarter}</div>
         <div className="text-2xl font-bold text-white capitalize">{play_type || 'special'}</div>
       </div>
     )
@@ -41,11 +41,11 @@ export function DownDistance({ play }: DownDistanceProps) {
     : ''
 
   return (
-    <div className="bg-gray-800 rounded-lg p-4 border border-gray-700/60">
-      <div className="text-xs text-gray-500 uppercase tracking-wide mb-2">Situation</div>
-      <div className="text-xs text-gray-500 mb-0.5">Q{quarter}</div>
+    <div className="bg-gray-800 rounded-lg p-4 min-h-[7rem] border border-gray-700/60">
+      <div className="text-xs text-gray-400 uppercase tracking-wide mb-2">Situation</div>
+      <div className="text-xs text-gray-400 mb-0.5">Q{quarter}</div>
       <div className="text-2xl font-bold text-white leading-tight">
-        {ordinal(down)} <span className="text-gray-600 font-normal">&amp;</span> {yards_to_go ?? '?'}
+        {ordinal(down)} <span className="text-gray-500 font-normal">&amp;</span> {yards_to_go ?? '?'}
       </div>
       {yardLineDisplay && <div className="text-xs text-gray-400 mt-1">{yardLineDisplay}</div>}
     </div>

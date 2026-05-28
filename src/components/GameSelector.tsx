@@ -46,7 +46,7 @@ function GameCard({ game, onSelect, blindMode }: { game: GameSummary; onSelect: 
       onClick={() => onSelect(game.game_id)}
       className="text-left bg-gray-800 rounded-lg p-4 cursor-pointer border border-gray-700/50 hover:ring-2 hover:ring-blue-500 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/40 focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all duration-150"
     >
-      {dateLabel && <div className="text-xs text-gray-500 mb-1.5">{dateLabel}</div>}
+      {dateLabel && <div className="text-xs text-gray-400 mb-1.5">{dateLabel}</div>}
       <div className="flex items-center gap-1.5 text-base font-bold text-white leading-tight flex-wrap">
         <img src={teamLogoUrl(game.away_team)} alt="" className="w-6 h-6 object-contain flex-shrink-0" onError={hideImgOnError} />
         {awayDisplay}
@@ -166,7 +166,7 @@ function ScheduleRow({ entry, onSelect, blindMode }: {
       className="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg bg-gray-800 border border-gray-700/50 hover:ring-2 hover:ring-blue-500 hover:border-blue-500/50 focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all duration-150 text-left cursor-pointer"
     >
       <span className="w-32 text-xs font-mono text-gray-400 shrink-0">{label}</span>
-      <span className="text-xs text-gray-500 shrink-0 w-5">{isHome ? 'vs' : '@'}</span>
+      <span className="text-xs text-gray-400 shrink-0 w-5">{isHome ? 'vs' : '@'}</span>
       <img
         src={teamLogoUrl(opponent)}
         alt=""
@@ -183,7 +183,7 @@ function ScheduleRow({ entry, onSelect, blindMode }: {
         {isOT && (
           <span className="text-xs font-mono bg-amber-900/60 text-amber-400 border border-amber-700/50 px-1 py-0.5 rounded">OT</span>
         )}
-        <span className="text-xs text-gray-500 ml-0.5">FINAL</span>
+        <span className="text-xs text-gray-400 ml-0.5">FINAL</span>
       </div>
     </button>
   )
@@ -208,7 +208,7 @@ function YearPicker({ abbr, seasons, onBack, onSelect }: {
       <div className="flex items-center gap-3 mb-5">
         <button
           onClick={onBack}
-          className="text-xs font-mono px-2.5 py-1.5 rounded bg-gray-800 border border-gray-700 text-gray-400 hover:text-white hover:border-gray-500 transition-colors cursor-pointer shrink-0"
+          className="text-xs font-mono px-2.5 py-2 rounded bg-gray-800 border border-gray-700 text-gray-400 hover:text-white hover:border-gray-500 transition-colors cursor-pointer shrink-0 focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
           ← All Teams
         </button>
@@ -252,9 +252,9 @@ function TeamScheduleView({ abbr, season, schedule, onBack, onSelect, blindMode 
       <div className="flex items-center gap-3 mb-5">
         <button
           onClick={onBack}
-          className="text-xs font-mono px-2.5 py-1.5 rounded bg-gray-800 border border-gray-700 text-gray-400 hover:text-white hover:border-gray-500 transition-colors cursor-pointer shrink-0"
+          className="text-xs font-mono px-2.5 py-2 rounded bg-gray-800 border border-gray-700 text-gray-400 hover:text-white hover:border-gray-500 transition-colors cursor-pointer shrink-0 focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
-          ← {season}
+          ← Select Year
         </button>
         <img
           src={teamLogoUrl(abbr)}
@@ -304,7 +304,7 @@ export function GameSelector({ onSelect, blindMode }: GameSelectorProps) {
           <span>Failed to load games. Is the server running?</span>
           <button
             onClick={() => query.refetch()}
-            className="ml-4 bg-red-700 hover:bg-red-600 text-white px-3 py-1 rounded text-sm"
+            className="ml-4 bg-red-700 hover:bg-red-600 text-white px-3 py-2 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             Retry
           </button>

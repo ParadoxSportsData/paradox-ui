@@ -34,7 +34,7 @@ export function PlayDescription({ play }: PlayDescriptionProps) {
   return (
     <div className="bg-gray-800 rounded-lg p-4 h-44 overflow-y-auto border border-gray-700/60">
       <div className="flex items-center gap-2 mb-2">
-        <div className="text-xs text-gray-500 uppercase tracking-wide">Last Play</div>
+        <div className="text-xs text-gray-400 uppercase tracking-wide">Last Play</div>
         {play_type && (
           <span className={`text-xs px-2 py-0.5 rounded-full font-medium capitalize ${badgeClass(play_type)}`}>
             {play_type.replace('_', ' ')}

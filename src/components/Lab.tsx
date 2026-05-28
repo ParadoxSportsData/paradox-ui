@@ -26,7 +26,7 @@ function NavMenu({ onGoToGames }: { onGoToGames: () => void }) {
     <div className="relative">
       <button
         onClick={() => setOpen(o => !o)}
-        className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 cursor-pointer transition-colors"
+        className="p-2.5 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
         aria-label="Navigation menu"
         aria-expanded={open}
       >
@@ -42,7 +42,7 @@ function NavMenu({ onGoToGames }: { onGoToGames: () => void }) {
           <div className="absolute left-0 top-full mt-1.5 z-20 bg-gray-800 border border-gray-700/60 rounded-lg shadow-xl overflow-hidden min-w-[180px]">
             <button
               onClick={() => { setOpen(false); onGoToGames() }}
-              className="w-full text-left px-4 py-2.5 text-sm text-gray-300 hover:bg-gray-700 hover:text-white transition-colors cursor-pointer"
+              className="w-full text-left px-4 py-2.5 text-sm text-gray-300 hover:bg-gray-700 hover:text-white transition-colors cursor-pointer focus:outline-none focus:bg-gray-700 focus:text-white"
             >
               Game Selection
             </button>
@@ -102,7 +102,7 @@ export function Lab({ onBack }: LabProps) {
                   <button
                     key={q}
                     onClick={() => { setQuarter(q); setTimeRemainingQuarter(SECONDS_PER_QUARTER) }}
-                    className={`py-3 rounded-lg font-bold transition-all ${
+                    className={`py-3 rounded-lg font-bold transition-all focus:outline-none focus:ring-2 focus:ring-purple-500 ${
                       quarter === q
                         ? 'bg-purple-600 text-white'
                         : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
@@ -122,7 +122,7 @@ export function Lab({ onBack }: LabProps) {
                   <button
                     key={d}
                     onClick={() => setDown(d)}
-                    className={`py-3 rounded-lg font-bold transition-all ${
+                    className={`py-3 rounded-lg font-bold transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                       down === d
                         ? 'bg-blue-600 text-white'
                         : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
@@ -140,9 +140,9 @@ export function Lab({ onBack }: LabProps) {
                 Distance to First Down: <span className="text-blue-400 text-xl">{distance} yards</span>
               </label>
               <div className="flex items-center gap-3">
-                <button onClick={() => setDistance(Math.max(1, distance - 1))} className="bg-gray-800 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg">−</button>
+                <button onClick={() => setDistance(Math.max(1, distance - 1))} className="bg-gray-800 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">−</button>
                 <input id="lab-distance" type="range" min="1" max="99" value={distance} onChange={(e) => setDistance(Number(e.target.value))} className="flex-1 h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-600" />
-                <button onClick={() => setDistance(Math.min(99, distance + 1))} className="bg-gray-800 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg">+</button>
+                <button onClick={() => setDistance(Math.min(99, distance + 1))} className="bg-gray-800 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">+</button>
               </div>
               <div className="flex justify-between text-xs text-gray-500 mt-1"><span>1</span><span>50</span><span>99</span></div>
             </div>
@@ -157,9 +157,9 @@ export function Lab({ onBack }: LabProps) {
               </label>
               <p className="text-xs text-gray-500 mb-3">{getFieldZone(yardline)}</p>
               <div className="flex items-center gap-3">
-                <button onClick={() => setYardline(Math.max(1, yardline - 1))} className="bg-gray-800 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg">−</button>
+                <button onClick={() => setYardline(Math.max(1, yardline - 1))} className="bg-gray-800 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">−</button>
                 <input id="lab-yardline" type="range" min="1" max="99" value={yardline} onChange={(e) => setYardline(Number(e.target.value))} className="flex-1 h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-green-600" />
-                <button onClick={() => setYardline(Math.min(99, yardline + 1))} className="bg-gray-800 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg">+</button>
+                <button onClick={() => setYardline(Math.min(99, yardline + 1))} className="bg-gray-800 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">+</button>
               </div>
               <div className="flex justify-between text-xs text-gray-500 mt-2">
                 <span className="text-blue-400">Own Endzone</span>
@@ -172,12 +172,12 @@ export function Lab({ onBack }: LabProps) {
             <div className="bg-gray-900 rounded-lg p-6 border border-gray-800">
               <label htmlFor="lab-time" className="block text-sm font-semibold text-gray-300 mb-3">
                 Time Remaining in {quarter === 5 ? 'OT' : `Q${quarter}`}:{' '}
-                <span className="text-yellow-400 text-xl">{formatTime(timeRemainingQuarter)}</span>
+                <span className="text-amber-400 text-xl">{formatTime(timeRemainingQuarter)}</span>
               </label>
               <div className="flex items-center gap-3">
-                <button onClick={() => setTimeRemainingQuarter(Math.max(0, timeRemainingQuarter - 1))} className="bg-gray-800 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg">−</button>
-                <input id="lab-time" type="range" min="0" max={SECONDS_PER_QUARTER} step="1" value={timeRemainingQuarter} onChange={(e) => setTimeRemainingQuarter(Number(e.target.value))} className="flex-1 h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-yellow-600" />
-                <button onClick={() => setTimeRemainingQuarter(Math.min(SECONDS_PER_QUARTER, timeRemainingQuarter + 1))} className="bg-gray-800 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg">+</button>
+                <button onClick={() => setTimeRemainingQuarter(Math.max(0, timeRemainingQuarter - 1))} className="bg-gray-800 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">−</button>
+                <input id="lab-time" type="range" min="0" max={SECONDS_PER_QUARTER} step="1" value={timeRemainingQuarter} onChange={(e) => setTimeRemainingQuarter(Number(e.target.value))} className="flex-1 h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-amber-500" />
+                <button onClick={() => setTimeRemainingQuarter(Math.min(SECONDS_PER_QUARTER, timeRemainingQuarter + 1))} className="bg-gray-800 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">+</button>
               </div>
               <div className="flex justify-between text-xs text-gray-500 mt-1"><span>0:00 (End)</span><span>7:30</span><span>15:00 (Start)</span></div>
             </div>
@@ -192,9 +192,9 @@ export function Lab({ onBack }: LabProps) {
                 <span className="text-sm text-gray-500 ml-2">({scoreDiff > 0 ? 'Winning' : scoreDiff < 0 ? 'Losing' : 'Tied'})</span>
               </label>
               <div className="flex items-center gap-3">
-                <button onClick={() => setScoreDiff(Math.max(-50, scoreDiff - 1))} className="bg-gray-800 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg">−</button>
+                <button onClick={() => setScoreDiff(Math.max(-50, scoreDiff - 1))} className="bg-gray-800 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">−</button>
                 <input id="lab-score-diff" type="range" min="-50" max="50" value={scoreDiff} onChange={(e) => setScoreDiff(Number(e.target.value))} className="flex-1 h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-purple-600" />
-                <button onClick={() => setScoreDiff(Math.min(50, scoreDiff + 1))} className="bg-gray-800 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg">+</button>
+                <button onClick={() => setScoreDiff(Math.min(50, scoreDiff + 1))} className="bg-gray-800 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">+</button>
               </div>
               <div className="flex justify-between text-xs text-gray-500 mt-1"><span>-50</span><span>0 (Tied)</span><span>+50</span></div>
             </div>
@@ -203,8 +203,8 @@ export function Lab({ onBack }: LabProps) {
             <div className="bg-gray-900 rounded-lg p-6 border border-gray-800">
               <label className="block text-sm font-semibold text-gray-300 mb-3">Possession</label>
               <div className="grid grid-cols-2 gap-2">
-                <button onClick={() => setIsHomePossession(true)} className={`py-3 rounded-lg font-bold transition-all ${isHomePossession ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>Home</button>
-                <button onClick={() => setIsHomePossession(false)} className={`py-3 rounded-lg font-bold transition-all ${!isHomePossession ? 'bg-red-600 text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>Away</button>
+                <button onClick={() => setIsHomePossession(true)} className={`py-3 rounded-lg font-bold transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 ${isHomePossession ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>Home</button>
+                <button onClick={() => setIsHomePossession(false)} className={`py-3 rounded-lg font-bold transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 ${!isHomePossession ? 'bg-red-600 text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>Away</button>
               </div>
             </div>
 
@@ -223,8 +223,8 @@ export function Lab({ onBack }: LabProps) {
               </select>
               <label className="block text-sm font-semibold text-gray-300 mb-3">Game Type</label>
               <div className="grid grid-cols-2 gap-2">
-                <button onClick={() => setEraWeek(1)} className={`py-3 rounded-lg font-bold transition-all ${eraWeek < 19 ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>Regular Season</button>
-                <button onClick={() => setEraWeek(20)} className={`py-3 rounded-lg font-bold transition-all ${eraWeek >= 19 ? 'bg-purple-600 text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>Playoffs</button>
+                <button onClick={() => setEraWeek(1)} className={`py-3 rounded-lg font-bold transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 ${eraWeek < 19 ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>Regular Season</button>
+                <button onClick={() => setEraWeek(20)} className={`py-3 rounded-lg font-bold transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 ${eraWeek >= 19 ? 'bg-purple-600 text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>Playoffs</button>
               </div>
               {otEra && <p className="text-xs text-gray-500 mt-3">OT Rules: <span className="text-blue-400 font-mono">{otEra}</span></p>}
             </div>
@@ -260,25 +260,25 @@ export function Lab({ onBack }: LabProps) {
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     onClick={() => { setQuarter(4); setDown(4); setDistance(1); setYardline(1); setTimeRemainingQuarter(10); setScoreDiff(-4); setIsHomePossession(true); setEraSeason(2024); setEraWeek(1) }}
-                    className="bg-gray-800 hover:bg-gray-700 text-white text-xs py-2 px-3 rounded transition-all"
+                    className="bg-gray-800 hover:bg-gray-700 text-white text-xs py-2 px-3 rounded transition-all focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     4th &amp; Goal
                   </button>
                   <button
                     onClick={() => { setQuarter(4); setDown(3); setDistance(10); setYardline(50); setTimeRemainingQuarter(120); setScoreDiff(0); setIsHomePossession(true); setEraSeason(2024); setEraWeek(1) }}
-                    className="bg-gray-800 hover:bg-gray-700 text-white text-xs py-2 px-3 rounded transition-all"
+                    className="bg-gray-800 hover:bg-gray-700 text-white text-xs py-2 px-3 rounded transition-all focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     Tied, 2-Min Warning
                   </button>
                   <button
                     onClick={() => { setQuarter(5); setDown(1); setDistance(10); setYardline(50); setTimeRemainingQuarter(SECONDS_PER_QUARTER); setScoreDiff(0); setIsHomePossession(true); setEraSeason(2011); setEraWeek(1) }}
-                    className="bg-gray-800 hover:bg-gray-700 text-white text-xs py-2 px-3 rounded transition-all"
+                    className="bg-gray-800 hover:bg-gray-700 text-white text-xs py-2 px-3 rounded transition-all focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     OT 2011 (Sudden Death)
                   </button>
                   <button
                     onClick={() => { setQuarter(5); setDown(1); setDistance(10); setYardline(50); setTimeRemainingQuarter(SECONDS_PER_QUARTER); setScoreDiff(0); setIsHomePossession(true); setEraSeason(2024); setEraWeek(1) }}
-                    className="bg-gray-800 hover:bg-gray-700 text-white text-xs py-2 px-3 rounded transition-all"
+                    className="bg-gray-800 hover:bg-gray-700 text-white text-xs py-2 px-3 rounded transition-all focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     OT 2024 (Modified)
                   </button>

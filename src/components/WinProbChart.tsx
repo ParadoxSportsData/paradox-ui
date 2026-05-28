@@ -160,8 +160,16 @@ export function WinProbChart({ gameId, homeTeam, awayTeam, currentTick, onTickCh
       </div>
 
       <div
-        className={`relative${onTickChange ? ' cursor-crosshair' : ''}`}
+        role={onTickChange ? 'button' : undefined}
+        tabIndex={onTickChange ? 0 : undefined}
+        aria-label={onTickChange ? 'Win probability chart — click to seek to that game moment' : undefined}
+        className={`relative${onTickChange ? ' cursor-crosshair focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900 rounded-sm' : ''}`}
         onClick={handlePlotClick}
+        onKeyDown={onTickChange ? (e: React.KeyboardEvent<HTMLDivElement>) => {
+          // Left/Right arrow keys seek by 60s increments
+          if (e.key === 'ArrowRight') { e.preventDefault(); onTickChange(Math.min(maxTick, currentTick + 60)) }
+          if (e.key === 'ArrowLeft') { e.preventDefault(); onTickChange(Math.max(0, currentTick - 60)) }
+        } : undefined}
       >
         <ResponsiveContainer width="100%" height={200}>
           <ComposedChart data={data} margin={{ top: 4, right: RIGHT_MARGIN, left: 0, bottom: 4 }}>

@@ -213,7 +213,7 @@ export function TimelineScrubber({ gameId, value, onTickChange }: TimelineScrubb
         <button
           onClick={handlePrev}
           disabled={!hasPrev}
-          className="px-3 py-1 rounded-full text-sm bg-gray-800 border border-gray-700 hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors"
+          className="px-3 py-2 rounded-full text-sm bg-gray-800 border border-gray-700 hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
           aria-label="Previous play"
         >
           ←
@@ -225,7 +225,7 @@ export function TimelineScrubber({ gameId, value, onTickChange }: TimelineScrubb
             key={key}
             onClick={() => handleFilterClick(key)}
             className={[
-              'px-4 py-1 rounded-full text-sm font-medium transition-colors',
+              'px-4 py-2 rounded-full text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500',
               activeFilter === key
                 ? FILTER_ACTIVE_CLASS[key]
                 : 'bg-gray-800 text-gray-400 hover:bg-gray-700 border border-gray-700',
@@ -239,7 +239,7 @@ export function TimelineScrubber({ gameId, value, onTickChange }: TimelineScrubb
         <button
           onClick={handleNext}
           disabled={!hasNext}
-          className="px-3 py-1 rounded-full text-sm bg-gray-800 border border-gray-700 hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors"
+          className="px-3 py-2 rounded-full text-sm bg-gray-800 border border-gray-700 hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
           aria-label="Next play"
         >
           →
@@ -290,9 +290,13 @@ export function TimelineScrubber({ gameId, value, onTickChange }: TimelineScrubb
           return (
             <div
               key={t}
-              className="absolute top-0 h-2 w-2 cursor-pointer z-10"
+              role="button"
+              tabIndex={0}
+              aria-label={`${play.quarter === 5 ? 'OT' : `Q${play.quarter}`} ${tickToQtrClock(play.quarter, t)} · ${play.play_type}`}
+              className="absolute top-0 h-4 w-4 -mt-1 cursor-pointer z-10 focus:outline-none focus-visible:ring-1 focus-visible:ring-blue-500 rounded-sm"
               style={{ left: `${(t / maxTick) * 100}%`, transform: 'translateX(-50%)' }}
               onClick={() => applyTick(t, play)}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); applyTick(t, play) } }}
               onMouseEnter={() => setHoveredTick(t)}
               onMouseLeave={() => setHoveredTick(null)}
             >
