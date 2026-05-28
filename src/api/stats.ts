@@ -1,93 +1,105 @@
 // src/api/stats.ts
+// PDX-110: Add Zod validation to stats API client.
 // paradox-stats API client — GET /game/{id}/stats?tick={n}
 // Mirrors the StatsResponse schema from paradox-stats service (port 8001).
 
+import { z } from 'zod'
+
 export const STATS_URL = import.meta.env.VITE_STATS_API_URL ?? 'http://localhost:8001'
 
-export interface TeamStats {
-  pass_yards: number
-  completions: number
-  attempts: number
-  pass_tds: number
-  interceptions: number
-  rush_yards: number
-  carries: number
-  rush_tds: number
-  fumbles_lost: number
-  turnovers: number
-  sacks_allowed: number
-  sacks: number
-  first_downs: number
-  third_down_attempts: number
-  third_down_conversions: number
-  epa: number
-}
+export const TeamStatsSchema = z.object({
+  pass_yards: z.number(),
+  completions: z.number(),
+  attempts: z.number(),
+  pass_tds: z.number(),
+  interceptions: z.number(),
+  rush_yards: z.number(),
+  carries: z.number(),
+  rush_tds: z.number(),
+  fumbles_lost: z.number(),
+  turnovers: z.number(),
+  sacks_allowed: z.number(),
+  sacks: z.number(),
+  first_downs: z.number(),
+  third_down_attempts: z.number(),
+  third_down_conversions: z.number(),
+  epa: z.number(),
+})
 
-export interface QBStats {
-  player_id: string
-  name: string
-  pass_yards: number
-  completions: number
-  attempts: number
-  pass_tds: number
-  interceptions: number
-  passer_rating: number | null
-  sacks_taken: number
-  rush_yards: number
-  rush_attempts: number
-}
+export const QBStatsSchema = z.object({
+  player_id: z.string(),
+  name: z.string(),
+  pass_yards: z.number(),
+  completions: z.number(),
+  attempts: z.number(),
+  pass_tds: z.number(),
+  interceptions: z.number(),
+  passer_rating: z.number().nullable(),
+  sacks_taken: z.number(),
+  rush_yards: z.number(),
+  rush_attempts: z.number(),
+})
 
-export interface RBStats {
-  player_id: string
-  name: string
-  carries: number
-  rush_yards: number
-  rush_tds: number
-  receptions: number
-  rec_yards: number
-  rec_tds: number
-}
+export const RBStatsSchema = z.object({
+  player_id: z.string(),
+  name: z.string(),
+  carries: z.number(),
+  rush_yards: z.number(),
+  rush_tds: z.number(),
+  receptions: z.number(),
+  rec_yards: z.number(),
+  rec_tds: z.number(),
+})
 
-export interface WRTEStats {
-  player_id: string
-  name: string
-  targets: number
-  receptions: number
-  rec_yards: number
-  rec_tds: number
-}
+export const WRTEStatsSchema = z.object({
+  player_id: z.string(),
+  name: z.string(),
+  targets: z.number(),
+  receptions: z.number(),
+  rec_yards: z.number(),
+  rec_tds: z.number(),
+})
 
-export interface KStats {
-  player_id: string
-  name: string
-  fg_made: number
-  fg_att: number
-  fg_long: number
-  xp_made: number
-  xp_att: number
-}
+export const KStatsSchema = z.object({
+  player_id: z.string(),
+  name: z.string(),
+  fg_made: z.number(),
+  fg_att: z.number(),
+  fg_long: z.number(),
+  xp_made: z.number(),
+  xp_att: z.number(),
+})
 
-export interface PlayerGroup {
-  qb: QBStats[]
-  rb: RBStats[]
-  wr_te: WRTEStats[]
-  k: KStats[]
-}
+export const PlayerGroupSchema = z.object({
+  qb: z.array(QBStatsSchema),
+  rb: z.array(RBStatsSchema),
+  wr_te: z.array(WRTEStatsSchema),
+  k: z.array(KStatsSchema),
+})
 
-export interface StatsResponse {
-  game_id: string
-  tick: number
-  home_team: string
-  away_team: string
-  team: {
-    home: TeamStats
-    away: TeamStats
-  }
-  players: {
-    home: PlayerGroup
-    away: PlayerGroup
-  }
-}
+export const StatsResponseSchema = z.object({
+  game_id: z.string(),
+  tick: z.number(),
+  home_team: z.string(),
+  away_team: z.string(),
+  team: z.object({
+    home: TeamStatsSchema,
+    away: TeamStatsSchema,
+  }),
+  players: z.object({
+    home: PlayerGroupSchema,
+    away: PlayerGroupSchema,
+  }),
+})
+
+// Inferred types — replaces the hand-written interfaces above
+export type TeamStats = z.infer<typeof TeamStatsSchema>
+export type QBStats = z.infer<typeof QBStatsSchema>
+export type RBStats = z.infer<typeof RBStatsSchema>
+export type WRTEStats = z.infer<typeof WRTEStatsSchema>
+export type KStats = z.infer<typeof KStatsSchema>
+export type PlayerGroup = z.infer<typeof PlayerGroupSchema>
+export type StatsResponse = z.infer<typeof StatsResponseSchema>
 
 export async function fetchGameStats(
   gameId: string,
@@ -101,5 +113,5 @@ export async function fetchGameStats(
   if (!res.ok) {
     throw new Error(`fetchGameStats(${gameId}, ${tick}): ${res.status} ${res.statusText}`)
   }
-  return res.json() as Promise<StatsResponse>
+  return StatsResponseSchema.parse(await res.json())
 }
