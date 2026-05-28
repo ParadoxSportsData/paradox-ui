@@ -13,6 +13,8 @@ import { getDisplayName, teamLogoUrl } from '../lib/nflTeams'
 import { buildTeamSchedule, formatWeekLabel, getAllTeams, getSeasonsForTeam } from '../lib/schedule'
 import type { GameSummary } from '../api/schemas'
 import type { ScheduleEntry } from '../lib/schedule'
+import { REGULATION_TICKS } from '../lib/nfl2011'
+import { hideImgOnError } from '../lib/imgUtils'
 
 interface GameSelectorProps {
   onSelect: (gameId: string) => void
@@ -34,7 +36,7 @@ function formatGameDate(isoDate: string | undefined, week: number | undefined): 
 }
 
 function GameCard({ game, onSelect, blindMode }: { game: GameSummary; onSelect: (id: string) => void; blindMode: boolean }) {
-  const isOT = game.duration > 3600
+  const isOT = game.duration > REGULATION_TICKS
   const awayDisplay = getDisplayName(game.away_team)
   const homeDisplay = getDisplayName(game.home_team)
   const dateLabel = formatGameDate(game.game_date, game.week)
@@ -46,10 +48,10 @@ function GameCard({ game, onSelect, blindMode }: { game: GameSummary; onSelect: 
     >
       {dateLabel && <div className="text-xs text-gray-500 mb-1.5">{dateLabel}</div>}
       <div className="flex items-center gap-1.5 text-base font-bold text-white leading-tight flex-wrap">
-        <img src={teamLogoUrl(game.away_team)} alt="" className="w-6 h-6 object-contain flex-shrink-0" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
+        <img src={teamLogoUrl(game.away_team)} alt="" className="w-6 h-6 object-contain flex-shrink-0" onError={hideImgOnError} />
         {awayDisplay}
         <span className="text-gray-500 font-normal mx-0.5">@</span>
-        <img src={teamLogoUrl(game.home_team)} alt="" className="w-6 h-6 object-contain flex-shrink-0" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
+        <img src={teamLogoUrl(game.home_team)} alt="" className="w-6 h-6 object-contain flex-shrink-0" onError={hideImgOnError} />
         {homeDisplay}
       </div>
       <div className="text-2xl font-mono mt-2">
@@ -94,7 +96,7 @@ function TeamButton({ abbr, onSelect }: { abbr: string; onSelect: (abbr: string)
         src={teamLogoUrl(abbr)}
         alt=""
         className="w-6 h-6 object-contain flex-shrink-0"
-        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+        onError={hideImgOnError}
       />
       {getDisplayName(abbr)}
     </button>
@@ -169,7 +171,7 @@ function ScheduleRow({ entry, onSelect, blindMode }: {
         src={teamLogoUrl(opponent)}
         alt=""
         className="w-5 h-5 object-contain flex-shrink-0"
-        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+        onError={hideImgOnError}
       />
       <span className="flex-1 text-sm font-medium text-gray-200">{getDisplayName(opponent)}</span>
       <div className="flex items-center gap-1.5 shrink-0">
@@ -214,7 +216,7 @@ function YearPicker({ abbr, seasons, onBack, onSelect }: {
           src={teamLogoUrl(abbr)}
           alt=""
           className="w-7 h-7 object-contain"
-          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+          onError={hideImgOnError}
         />
         <h2 className="text-xl font-semibold text-gray-100">{getDisplayName(abbr)}</h2>
       </div>
@@ -258,7 +260,7 @@ function TeamScheduleView({ abbr, season, schedule, onBack, onSelect, blindMode 
           src={teamLogoUrl(abbr)}
           alt=""
           className="w-7 h-7 object-contain"
-          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+          onError={hideImgOnError}
         />
         <h2 className="text-xl font-semibold text-gray-100">{getDisplayName(abbr)} &mdash; {season}</h2>
       </div>

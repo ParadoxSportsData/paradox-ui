@@ -26,6 +26,12 @@ export const PLAYOFF_WEEK = {
 
 export const REGULAR_SEASON_WEEKS = 17
 
+// Game-clock timing constants (in elapsed seconds from kickoff)
+export const REGULATION_TICKS = 3600      // seconds in a full regulation game
+export const QUARTER_TICKS = 900          // seconds per quarter
+export const SECONDS_PER_QUARTER = 900    // alias — use where "per quarter" is clearer
+export const OT1_TICKS = 4500            // end of first OT period (3600 + 900)
+
 // getConference accepts canonical abbreviations only.
 export function getConference(canonicalAbbr: string): 'AFC' | 'NFC' | null {
   if (AFC_TEAMS.has(canonicalAbbr)) return 'AFC'

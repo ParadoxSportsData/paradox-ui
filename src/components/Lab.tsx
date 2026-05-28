@@ -1,9 +1,20 @@
 // src/components/Lab.tsx
 // PDX-67: Scenario Simulator — port of paradox-platform/paradox-web/app/lab/page.tsx.
 // Adapted: removed "use client", added onBack prop, replaced fetch with predictScenario().
+// PDX-120: Extracted useScenarioPrediction hook, WinProbGauge component, footballUtils.
 
-import { useState, useEffect } from 'react'
-import { predictScenario, type ScenarioRequest } from '../api/predict'
+import { useState } from 'react'
+import type { ScenarioRequest } from '../api/predict'
+import { useScenarioPrediction } from '../hooks/useScenarioPrediction'
+import { WinProbGauge } from './WinProbGauge'
+import {
+  formatTime,
+  getFootballFieldPosition,
+  getFieldZone,
+  getFieldPositionColor,
+  formatDown,
+} from '../lib/footballUtils'
+import { SECONDS_PER_QUARTER } from '../lib/nfl2011'
 
 interface LabProps {
   onBack: () => void
@@ -42,96 +53,30 @@ function NavMenu({ onGoToGames }: { onGoToGames: () => void }) {
   )
 }
 
-function formatTime(seconds: number): string {
-  const mins = Math.floor(seconds / 60)
-  const secs = seconds % 60
-  return `${mins}:${secs.toString().padStart(2, '0')}`
-}
-
-function getFootballFieldPosition(yardline: number): string {
-  if (yardline < 50) return `Own ${yardline}`
-  if (yardline === 50) return 'Midfield (50)'
-  return `Opp ${100 - yardline}`
-}
-
-function getFieldZone(yardline: number): string {
-  if (yardline >= 80) return 'RED ZONE'
-  if (yardline >= 65) return 'SCORING RANGE'
-  if (yardline > 50) return 'Opponent Territory'
-  if (yardline === 50) return 'Midfield'
-  return 'Own Territory'
-}
-
-function getFieldPositionColor(yardline: number): string {
-  if (yardline >= 80) return 'text-red-400'
-  if (yardline >= 65) return 'text-orange-400'
-  if (yardline > 50) return 'text-green-400'
-  return 'text-blue-400'
-}
-
 export function Lab({ onBack }: LabProps) {
   const [down, setDown] = useState(1)
   const [distance, setDistance] = useState(10)
   const [yardline, setYardline] = useState(50)
   const [quarter, setQuarter] = useState(4)
-  const [timeRemainingQuarter, setTimeRemainingQuarter] = useState(900)
+  const [timeRemainingQuarter, setTimeRemainingQuarter] = useState(SECONDS_PER_QUARTER)
   const [scoreDiff, setScoreDiff] = useState(0)
   const [isHomePossession, setIsHomePossession] = useState(true)
   const [eraSeason, setEraSeason] = useState(2024)
   const [eraWeek, setEraWeek] = useState(1)
 
-  const [winProbability, setWinProbability] = useState<number | null>(null)
-  const [otEra, setOtEra] = useState<string>('')
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const scenario: ScenarioRequest = {
+    down,
+    distance,
+    yardline_100: yardline,
+    quarter,
+    seconds_remaining_quarter: timeRemainingQuarter,
+    score_differential: scoreDiff,
+    is_home_possession: isHomePossession,
+    era_season: eraSeason,
+    era_week: eraWeek,
+  }
 
-  useEffect(() => {
-    let cancelled = false
-
-    async function fetchPrediction() {
-      setIsLoading(true)
-      setError(null)
-
-      const scenario: ScenarioRequest = {
-        down,
-        distance,
-        yardline_100: yardline,
-        quarter,
-        seconds_remaining_quarter: timeRemainingQuarter,
-        score_differential: scoreDiff,
-        is_home_possession: isHomePossession,
-        era_season: eraSeason,
-        era_week: eraWeek,
-      }
-
-      try {
-        const result = await predictScenario(scenario)
-        if (!cancelled) {
-          setWinProbability(result.win_probability)
-          setOtEra(result.ot_era)
-        }
-      } catch (err) {
-        if (!cancelled) {
-          setError(err instanceof Error ? err.message : 'Failed to fetch prediction')
-          setWinProbability(null)
-        }
-      } finally {
-        if (!cancelled) setIsLoading(false)
-      }
-    }
-
-    fetchPrediction()
-    return () => { cancelled = true }
-  }, [down, distance, yardline, quarter, timeRemainingQuarter, scoreDiff, isHomePossession, eraSeason, eraWeek])
-
-  const gaugeRadius = 100
-  const gaugeCircumference = 2 * Math.PI * gaugeRadius
-  const gaugeColor =
-    winProbability === null ? '#374151'
-    : winProbability >= 0.7 ? '#10b981'
-    : winProbability >= 0.5 ? '#3b82f6'
-    : winProbability >= 0.3 ? '#f59e0b'
-    : '#ef4444'
+  const { winProbability, otEra, loading, error } = useScenarioPrediction(scenario)
 
   return (
     <div className="min-h-screen bg-gray-950 text-gray-100">
@@ -156,7 +101,7 @@ export function Lab({ onBack }: LabProps) {
                 {[1, 2, 3, 4, 5].map((q) => (
                   <button
                     key={q}
-                    onClick={() => { setQuarter(q); setTimeRemainingQuarter(900) }}
+                    onClick={() => { setQuarter(q); setTimeRemainingQuarter(SECONDS_PER_QUARTER) }}
                     className={`py-3 rounded-lg font-bold transition-all ${
                       quarter === q
                         ? 'bg-purple-600 text-white'
@@ -191,12 +136,12 @@ export function Lab({ onBack }: LabProps) {
 
             {/* Distance */}
             <div className="bg-gray-900 rounded-lg p-6 border border-gray-800">
-              <label className="block text-sm font-semibold text-gray-300 mb-3">
+              <label htmlFor="lab-distance" className="block text-sm font-semibold text-gray-300 mb-3">
                 Distance to First Down: <span className="text-blue-400 text-xl">{distance} yards</span>
               </label>
               <div className="flex items-center gap-3">
                 <button onClick={() => setDistance(Math.max(1, distance - 1))} className="bg-gray-800 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg">−</button>
-                <input type="range" min="1" max="99" value={distance} onChange={(e) => setDistance(Number(e.target.value))} className="flex-1 h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-600" />
+                <input id="lab-distance" type="range" min="1" max="99" value={distance} onChange={(e) => setDistance(Number(e.target.value))} className="flex-1 h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-600" />
                 <button onClick={() => setDistance(Math.min(99, distance + 1))} className="bg-gray-800 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg">+</button>
               </div>
               <div className="flex justify-between text-xs text-gray-500 mt-1"><span>1</span><span>50</span><span>99</span></div>
@@ -204,7 +149,7 @@ export function Lab({ onBack }: LabProps) {
 
             {/* Yardline */}
             <div className="bg-gray-900 rounded-lg p-6 border border-gray-800">
-              <label className="block text-sm font-semibold text-gray-300 mb-1">
+              <label htmlFor="lab-yardline" className="block text-sm font-semibold text-gray-300 mb-1">
                 Ball Position:{' '}
                 <span className={`text-xl font-bold ${getFieldPositionColor(yardline)}`}>
                   {getFootballFieldPosition(yardline)}
@@ -213,7 +158,7 @@ export function Lab({ onBack }: LabProps) {
               <p className="text-xs text-gray-500 mb-3">{getFieldZone(yardline)}</p>
               <div className="flex items-center gap-3">
                 <button onClick={() => setYardline(Math.max(1, yardline - 1))} className="bg-gray-800 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg">−</button>
-                <input type="range" min="1" max="99" value={yardline} onChange={(e) => setYardline(Number(e.target.value))} className="flex-1 h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-green-600" />
+                <input id="lab-yardline" type="range" min="1" max="99" value={yardline} onChange={(e) => setYardline(Number(e.target.value))} className="flex-1 h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-green-600" />
                 <button onClick={() => setYardline(Math.min(99, yardline + 1))} className="bg-gray-800 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg">+</button>
               </div>
               <div className="flex justify-between text-xs text-gray-500 mt-2">
@@ -225,21 +170,21 @@ export function Lab({ onBack }: LabProps) {
 
             {/* Time Remaining */}
             <div className="bg-gray-900 rounded-lg p-6 border border-gray-800">
-              <label className="block text-sm font-semibold text-gray-300 mb-3">
+              <label htmlFor="lab-time" className="block text-sm font-semibold text-gray-300 mb-3">
                 Time Remaining in {quarter === 5 ? 'OT' : `Q${quarter}`}:{' '}
                 <span className="text-yellow-400 text-xl">{formatTime(timeRemainingQuarter)}</span>
               </label>
               <div className="flex items-center gap-3">
                 <button onClick={() => setTimeRemainingQuarter(Math.max(0, timeRemainingQuarter - 1))} className="bg-gray-800 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg">−</button>
-                <input type="range" min="0" max="900" step="1" value={timeRemainingQuarter} onChange={(e) => setTimeRemainingQuarter(Number(e.target.value))} className="flex-1 h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-yellow-600" />
-                <button onClick={() => setTimeRemainingQuarter(Math.min(900, timeRemainingQuarter + 1))} className="bg-gray-800 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg">+</button>
+                <input id="lab-time" type="range" min="0" max={SECONDS_PER_QUARTER} step="1" value={timeRemainingQuarter} onChange={(e) => setTimeRemainingQuarter(Number(e.target.value))} className="flex-1 h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-yellow-600" />
+                <button onClick={() => setTimeRemainingQuarter(Math.min(SECONDS_PER_QUARTER, timeRemainingQuarter + 1))} className="bg-gray-800 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg">+</button>
               </div>
               <div className="flex justify-between text-xs text-gray-500 mt-1"><span>0:00 (End)</span><span>7:30</span><span>15:00 (Start)</span></div>
             </div>
 
             {/* Score Differential */}
             <div className="bg-gray-900 rounded-lg p-6 border border-gray-800">
-              <label className="block text-sm font-semibold text-gray-300 mb-3">
+              <label htmlFor="lab-score-diff" className="block text-sm font-semibold text-gray-300 mb-3">
                 Score Differential:{' '}
                 <span className={`text-xl ml-1 ${scoreDiff > 0 ? 'text-green-400' : scoreDiff < 0 ? 'text-red-400' : 'text-gray-400'}`}>
                   {scoreDiff > 0 ? '+' : ''}{scoreDiff}
@@ -248,7 +193,7 @@ export function Lab({ onBack }: LabProps) {
               </label>
               <div className="flex items-center gap-3">
                 <button onClick={() => setScoreDiff(Math.max(-50, scoreDiff - 1))} className="bg-gray-800 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg">−</button>
-                <input type="range" min="-50" max="50" value={scoreDiff} onChange={(e) => setScoreDiff(Number(e.target.value))} className="flex-1 h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-purple-600" />
+                <input id="lab-score-diff" type="range" min="-50" max="50" value={scoreDiff} onChange={(e) => setScoreDiff(Number(e.target.value))} className="flex-1 h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-purple-600" />
                 <button onClick={() => setScoreDiff(Math.min(50, scoreDiff + 1))} className="bg-gray-800 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg">+</button>
               </div>
               <div className="flex justify-between text-xs text-gray-500 mt-1"><span>-50</span><span>0 (Tied)</span><span>+50</span></div>
@@ -265,8 +210,9 @@ export function Lab({ onBack }: LabProps) {
 
             {/* Era */}
             <div className="bg-gray-900 rounded-lg p-6 border border-gray-800">
-              <label className="block text-sm font-semibold text-gray-300 mb-3">NFL Rule Era</label>
+              <label htmlFor="lab-era-season" className="block text-sm font-semibold text-gray-300 mb-3">NFL Rule Era</label>
               <select
+                id="lab-era-season"
                 value={eraSeason}
                 onChange={(e) => setEraSeason(Number(e.target.value))}
                 className="w-full bg-gray-800 text-white rounded-lg px-4 py-3 border border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 mb-3"
@@ -289,47 +235,13 @@ export function Lab({ onBack }: LabProps) {
             <div className="bg-gray-900 rounded-lg p-8 border border-gray-800">
               <h2 className="text-2xl font-bold mb-6 text-center text-gray-200">Win Probability</h2>
 
-              <div className="relative w-64 h-64 mx-auto mb-6">
-                <svg className="w-full h-full transform -rotate-90" viewBox="0 0 256 256">
-                  <circle cx="128" cy="128" r={gaugeRadius} stroke="#374151" strokeWidth="20" fill="none" />
-                  {winProbability !== null && (
-                    <circle
-                      cx="128"
-                      cy="128"
-                      r={gaugeRadius}
-                      stroke={gaugeColor}
-                      strokeWidth="20"
-                      fill="none"
-                      strokeDasharray={gaugeCircumference}
-                      strokeDashoffset={gaugeCircumference * (1 - winProbability)}
-                      className="transition-all duration-700 ease-out"
-                      strokeLinecap="round"
-                    />
-                  )}
-                </svg>
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  {isLoading ? (
-                    <div className="text-blue-400 text-lg animate-pulse">Calculating…</div>
-                  ) : error ? (
-                    <div className="text-red-400 text-xs text-center px-4">{error}</div>
-                  ) : winProbability !== null ? (
-                    <>
-                      <div className="text-5xl font-bold text-white">{(winProbability * 100).toFixed(1)}%</div>
-                      <div className="text-sm text-gray-400 mt-1">
-                        {winProbability >= 0.7 ? 'Highly Favored' : winProbability >= 0.5 ? 'Favored' : winProbability >= 0.3 ? 'Underdog' : 'Long Shot'}
-                      </div>
-                    </>
-                  ) : (
-                    <div className="text-gray-500 text-sm">Adjust scenario</div>
-                  )}
-                </div>
-              </div>
+              <WinProbGauge winProbability={winProbability} loading={loading} error={error} />
 
               {/* Scenario Summary */}
               <div className="bg-gray-950 rounded-lg p-4 border border-gray-800 mb-6">
                 <h3 className="text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wide">Current Scenario</h3>
                 <p className="text-lg font-bold text-white">
-                  {quarter === 5 ? 'OT' : `Q${quarter}`} — {down}{['st','nd','rd','th'][down-1]} & {distance}
+                  {quarter === 5 ? 'OT' : `Q${quarter}`} — {formatDown(down, distance)}
                 </p>
                 <p className={`text-sm font-semibold ${getFieldPositionColor(yardline)}`}>
                   {getFootballFieldPosition(yardline)} · {getFieldZone(yardline)}
@@ -359,13 +271,13 @@ export function Lab({ onBack }: LabProps) {
                     Tied, 2-Min Warning
                   </button>
                   <button
-                    onClick={() => { setQuarter(5); setDown(1); setDistance(10); setYardline(50); setTimeRemainingQuarter(900); setScoreDiff(0); setIsHomePossession(true); setEraSeason(2011); setEraWeek(1) }}
+                    onClick={() => { setQuarter(5); setDown(1); setDistance(10); setYardline(50); setTimeRemainingQuarter(SECONDS_PER_QUARTER); setScoreDiff(0); setIsHomePossession(true); setEraSeason(2011); setEraWeek(1) }}
                     className="bg-gray-800 hover:bg-gray-700 text-white text-xs py-2 px-3 rounded transition-all"
                   >
                     OT 2011 (Sudden Death)
                   </button>
                   <button
-                    onClick={() => { setQuarter(5); setDown(1); setDistance(10); setYardline(50); setTimeRemainingQuarter(900); setScoreDiff(0); setIsHomePossession(true); setEraSeason(2024); setEraWeek(1) }}
+                    onClick={() => { setQuarter(5); setDown(1); setDistance(10); setYardline(50); setTimeRemainingQuarter(SECONDS_PER_QUARTER); setScoreDiff(0); setIsHomePossession(true); setEraSeason(2024); setEraWeek(1) }}
                     className="bg-gray-800 hover:bg-gray-700 text-white text-xs py-2 px-3 rounded transition-all"
                   >
                     OT 2024 (Modified)
