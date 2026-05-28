@@ -227,17 +227,57 @@ export function Lab({ onBack }: LabProps) {
                 <button onClick={() => setEraWeek(1)} className={`py-3 rounded-lg font-bold transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 ${eraWeek < 19 ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>Regular Season</button>
                 <button onClick={() => setEraWeek(20)} className={`py-3 rounded-lg font-bold transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 ${eraWeek >= 19 ? 'bg-purple-600 text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>Playoffs</button>
               </div>
-              {otEra && (
-                <div className="mt-3 rounded-md bg-gray-800/60 border border-gray-700/50 px-3 py-2.5">
-                  <p className="text-xs text-gray-500 mb-1">Active rule: <span className="text-blue-400 font-mono">{otEra}</span></p>
-                  <p className="text-xs text-gray-400 leading-snug">
-                    {otEra === 'SUDDEN_DEATH' && 'First score of any kind ends the game immediately. No guaranteed second possession.'}
-                    {otEra === 'MODIFIED' && 'Both teams guaranteed a possession unless the first drive ends in a touchdown. A field goal keeps the game alive.'}
-                    {otEra === 'MODIFIED_SHORT' && 'Same as Modified — both teams guaranteed possession unless the first drive is a TD — but the period is 10 minutes instead of 15.'}
-                    {otEra === 'GUARANTEED' && 'Both teams guaranteed a full possession regardless of what the first team scores. Introduced for NFL playoffs in 2022.'}
-                  </p>
-                </div>
-              )}
+              {/* OT rule breakdown for selected era */}
+              <div className="mt-3 space-y-2">
+                {([
+                  {
+                    gameType: 'Regular Season',
+                    active: eraWeek < 19,
+                    rule: eraSeason >= 2022
+                      ? 'Modified Short (10-min OT)'
+                      : eraSeason >= 2017
+                      ? 'Modified Short (10-min OT)'
+                      : 'Sudden Death',
+                    desc: eraSeason >= 2017
+                      ? 'Both teams guaranteed a possession unless the first drive ends in a touchdown. A field goal sends it back; a TD ends it.'
+                      : 'First score of any kind — touchdown, field goal, or safety — ends the game immediately. No guaranteed second possession.',
+                  },
+                  {
+                    gameType: 'Playoffs',
+                    active: eraWeek >= 19,
+                    rule: eraSeason >= 2022
+                      ? 'Guaranteed'
+                      : eraSeason >= 2012
+                      ? 'Modified Short (10-min OT)'
+                      : eraSeason >= 2010
+                      ? 'Modified (15-min OT)'
+                      : 'Sudden Death',
+                    desc: eraSeason >= 2022
+                      ? 'Both teams always receive a full possession regardless of what the first team scores. A touchdown on the opening drive no longer ends the game.'
+                      : eraSeason >= 2012
+                      ? 'Both teams guaranteed a possession unless the first drive ends in a touchdown. A field goal sends it back; a TD ends it.'
+                      : eraSeason >= 2010
+                      ? 'Both teams guaranteed a possession unless the first drive ends in a touchdown — same as Modified Short but with a 15-minute period.'
+                      : 'First score of any kind ends the game immediately. No guaranteed second possession.',
+                  },
+                ] as { gameType: string; active: boolean; rule: string; desc: string }[]).map(({ gameType, active, rule, desc }) => (
+                  <div
+                    key={gameType}
+                    className={`rounded-md px-3 py-2.5 border transition-colors ${
+                      active
+                        ? 'bg-blue-950/40 border-blue-700/50'
+                        : 'bg-gray-800/40 border-gray-700/30 opacity-60'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      {active && <span className="w-1.5 h-1.5 rounded-full bg-blue-400 flex-shrink-0" />}
+                      <span className={`text-xs font-semibold ${active ? 'text-blue-300' : 'text-gray-400'}`}>{gameType}</span>
+                      <span className="text-xs font-mono text-gray-500 ml-auto">{rule}</span>
+                    </div>
+                    <p className="text-xs text-gray-400 leading-snug">{desc}</p>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
 
