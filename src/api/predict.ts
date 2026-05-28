@@ -19,7 +19,7 @@ export const ScenarioRequestSchema = z.object({
 })
 
 export const ScenarioPredictionSchema = z.object({
-  win_probability: z.number(),
+  win_probability: z.number().min(0).max(1),
   ot_era: z.string(),
   scenario: ScenarioRequestSchema,
 })
